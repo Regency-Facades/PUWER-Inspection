@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSE Audit UK - Mobile Inspection</title>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --bg-color: #f4f4f9;
+            --text-color: #333;
+            --danger-color: #dc3545;
+            --success-color: #28a745;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        h2, h3 { color: var(--primary-color); margin-top: 0; }
+        .section { display: none; }
+        .section.active { display: block; }
+        
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-weight: bold; margin-bottom: 8px; }
+        input[type="text"], input[type="number"], textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        input[type="file"] { margin-top: 10px; }
+        
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .btn:disabled { background-color: #ccc; cursor: not-allowed; }
+        .btn-danger { background-color: var(--danger-color); }
+        .btn-success { background-color: var(--success-color); }
+        
+        .yn-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        .yn-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ccc;
+            background: white;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .yn-btn.selected-yes { border-color: var(--success-color); background: #e8f5e9; }
+        .yn-btn.selected-no { border-color: var(--danger-color); background: #ffebee; }
+        .yn-btn.selected-na { border-color: #6c757d; background: #e2e3e5; }
+        
+        .fail-notes { display: none; margin-top: 15px; background: #fff3f3; padding: 15px; border-left: 4px solid var(--danger-color); }
+        
+        /* Signature Pad */
+        #signature-pad {
+            border: 2px solid #ccc;
+            border-radius: 4px;
+            width: 100%;
+            height: 200px;
+            cursor: crosshair;
+            touch-action: none; /* Prevents scrolling while signing on mobile */
+        }
+        
+        .voice-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 id="brand-title">HSE Audit UK</h2>
+
+    <!-- 1. Project Verification Section -->
+    <div id="project-section" class="section active">
+        <h3>Site Manager Access</h3>
+        <div class="form-group">
+            <label>Confirm 4-Digit Project Number</label>
+            <input type="number" id="project-input" placeholder="e.g. 1761">
+        </div>
+        <button class="btn" onclick="verifyProject()">Continue to Briefing</button>
+    </div>
+
+    <!-- 2. PUWER Audio Briefing Section -->
+    <div id="briefing-section" class="section">
+        <h3>Mandatory PUWER Briefing</h3>
+        <div class="voice-indicator">
+            <span id="audio-status">🔊 Playing official safety briefing... Please listen carefully.</span>
+        </div>
+        <p id="briefing-text" style="line-height: 1.6; color: #555;">
+            "Welcome to the HSE Audit UK safety inspection module. Under the Provision and Use of Work Equipment Regulations (PUWER), it is your legal responsibility to ensure all tools and machinery operated on this site are safe, well-maintained, and fit for purpose. This inspection is a critical safety control. Please assess each item thoroughly. Any equipment deemed unsafe must be immediately withdrawn from use, isolated, and documented in this report. Your diligence protects lives."
+        </p>
+        <button class="btn btn-success" id="start-inspection-btn" disabled onclick="startInspection()">Start PUWER Inspection</button>
+    </div>
+
+    <!-- 3. Dynamic Inspection Form Section -->
+    <div id="inspection-section" class="section">
+        <h3 id="tool-counter">Inspecting Tool #1</h3>
+        
+        <div id="question-container">
+            <!-- Question 1: Identification (Text Only) -->
+            <div id="q1" class="question-block active">
+                <label>1. Tool Identification & Ownership</label>
+                <p style="font-size: 14px; color: #666;">Please provide the contractor name, tool type, and serial/asset number.</p>
+                <textarea id="tool-id-text" rows="3" placeholder="e.g., Subcontractor: Smith Electricals | Tool: Makita 18V Drill | Serial: 994830"></textarea>
+                <label style="margin-top:15px;">Upload Identification Photo:</label>
+                <input type="file" accept="image/*" capture="environment">
+            </div>
+
+            <!-- Question 2-6 Template (Injected via JS) -->
+            <div id="safety-questions"></div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="btn" onclick="nextTool()">Inspect Another Tool</button>
+            <button class="btn btn-success" onclick="finishInspection()">Generate Report</button>
+        </div>
+    </div>
+
+    <!-- 4. Signature Section -->
+    <div id="signature-section" class="section">
+        <h3>Sign Off Inspection</h3>
+        <p>By signing below, I confirm that I have carried out this PUWER inspection accurately.</p>
+        <canvas id="signature-pad"></canvas>
+        <button class="btn" style="background: #ccc; color: #333; margin-bottom: 10px;" onclick="clearSignature()">Clear Signature</button>
+        <button class="btn btn-success" onclick="submitToSupabase()">Sign & Submit to Database</button>
+    </div>
+
+    <!-- 5. Success Section -->
+    <div id="success-section" class="section">
+        <h3 style="color: var(--success-color);">Inspection Submitted!</h3>
+        <p>The report has been saved to Supabase and the PDF is available in the Officer Dashboard under your project code.</p>
+        <button class="btn" onclick="location.reload()">Return to Start</button>
+    </div>
+</div>
+
+<script>
+    // --- Global Variables & State ---
+    let currentProject = '';
+    let inspectedTools = [];
+    let currentToolData = {};
+    
+    // Standard safety questions (Questions 2-6)
+    const safetyCriteria = [
+        "2. Electrical & Power Safety: Are cables, plugs, and battery housings intact with no exposed wires?",
+        "3. Physical Integrity: Is the tool casing free from significant cracks, breaks, or structural damage?",
+        "4. Guards & Mechanical: Are all manufacturer safety guards present, secure, and functioning?",
+        "5. Emergency Controls: Do all switches and emergency cut-offs operate cleanly without sticking?",
+        "6. General Suitability: Is the tool fit for its intended purpose on this specific site?"
+    ];
+
+    // --- Initialization & Branding ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // Load project from localStorage if index.html passed it
+        const savedProj = localStorage.getItem('currentProjectNumber');
+        if(savedProj) document.getElementById('project-input').value = savedProj;
+
+        // Apply global branding
+        const branding = JSON.parse(localStorage.getItem('hseBranding'));
+        if(branding) {
+            document.documentElement.style.setProperty('--primary-color', branding.color);
+            if(branding.companyName) document.getElementById('brand-title').innerText = branding.companyName;
+        }
+
+        renderSafetyQuestions();
+        initSignaturePad();
+    });
+
+    function showSection(id) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    // --- Phase 1 & 2: Verification and Voice API ---
+    function verifyProject() {
+        const proj = document.getElementById('project-input').value;
+        if (proj.length === 4) {
+            currentProject = proj;
+            showSection('briefing-section');
+            playBriefing();
+        } else {
+            alert("Please enter a valid 4-digit project number.");
+        }
+    }
+
+    function playBriefing() {
+        const text = document.getElementById('briefing-text').innerText;
+        const speech = new SpeechSynthesisUtterance(text);
+        
+        // Attempt to select a female UK voice if available
+        const voices = window.speechSynthesis.getVoices();
+        const ukFemale = voices.find(v => v.lang === 'en-GB' && v.name.toLowerCase().includes('female'));
+        if(ukFemale) speech.voice = ukFemale;
+        
+        speech.rate = 0.95; // Slightly slower for an official tone
+        
+        speech.onend = () => {
+            document.getElementById('start-inspection-btn').disabled = false;
+            document.getElementById('audio-status').innerText = "✅ Briefing complete. You may proceed.";
+        };
+
+        window.speechSynthesis.speak(speech);
+    }
+
+    function startInspection() {
+        window.speechSynthesis.cancel(); // Stop any lingering audio
+        showSection('inspection-section');
+        document.getElementById('tool-counter').innerText = Inspecting Tool #${inspectedTools.length + 1};
+    }
+
+    // --- Phase 3: Form Logic ---
+    function renderSafetyQuestions() {
+        const container = document.getElementById('safety-questions');
+        safetyCriteria.forEach((q, index) => {
+            const qId = index + 2;
+            container.innerHTML += `
+                <div class="form-group" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 15px;">
+                    <label>${q}</label>
+                    <div class="yn-group">
+                        <button type="button" class="yn-btn" id="yes-btn-${qId}" onclick="handleYN(${qId}, 'yes')">Yes (Safe)</button>
+                        <button type="button" class="yn-btn" id="no-btn-${qId}" onclick="handleYN(${qId}, 'no')">No (Unsafe)</button>
+                        <button type="button" class="yn-btn" id="na-btn-${qId}" onclick="handleYN(${qId}, 'na')">N/A</button>
+                    </div>
+                    <div id="fail-notes-${qId}" class="fail-notes">
+                        <label style="color: var(--danger-color);">⚠️ Action Required: Note Defect & Advice Provided</label>
+                        <textarea id="notes-text-${qId}" rows="2" placeholder="Detail the fault and confirm the tool has been removed from service..."></textarea>
+                    </div>
+                    <label style="margin-top:10px;">Upload Condition Photo:</label>
+                    <input type="file" accept="image/*" capture="environment">
+                </div>
+            `;
+        });
+    }
+
+    function handleYN(qId, answer) {
+        // Grab all buttons and notes for this specific question
+        const yesBtn = document.getElementById(yes-btn-${qId});
+        const noBtn = document.getElementById(no-btn-${qId});
+        const naBtn = document.getElementById(na-btn-${qId});
+        const notes = document.getElementById(fail-notes-${qId});
+        
+        // Reset all selections first
+        yesBtn.classList.remove('selected-yes');
+        noBtn.classList.remove('selected-no');
+        naBtn.classList.remove('selected-na');
+        
+        // Apply the correct selection and toggle notes
+        if(answer === 'yes') {
+            yesBtn.classList.add('selected-yes');
+            notes.style.display = 'none';
+        } else if (answer === 'no') {
+            noBtn.classList.add('selected-no');
+            notes.style.display = 'block';
+        } else if (answer === 'na') {
+            naBtn.classList.add('selected-na');
+            notes.style.display = 'none';
+        }
+        
+        // Save state temporarily
+        currentToolData[q${qId}] = answer;
+    }
+
+    function captureCurrentTool() {
+        const idText = document.getElementById('tool-id-text').value;
+        if(!idText) {
+            alert("Please provide the tool identification details.");
+            return false;
+        }
+
+        let isSafe = true;
+        let failDetails = [];
+
+        // Check safety questions
+        for(let i = 2; i <= 6; i++) {
+            const answer = currentToolData[q${i}];
+            if (!answer) {
+                alert(Please answer Question ${i});
+                return false;
+            }
+            if (answer === 'no') {
+                isSafe = false;
+                const note = document.getElementById(notes-text-${i}).value;
+                failDetails.push({ question: safetyCriteria[i-2], inspectorNote: note });
+            }
+        }
+
+        inspectedTools.push({
+            identification: idText,
+            isSafe: isSafe,
+            failures: failDetails
+        });
+
+        return true;
+    }
+
+    function nextTool() {
+        if(captureCurrentTool()) {
+            resetForm();
+            document.getElementById('tool-counter').innerText = Inspecting Tool #${inspectedTools.length + 1};
+            window.scrollTo(0, 0);
+        }
+    }
+
+    function finishInspection() {
+        if(captureCurrentTool()) {
+            showSection('signature-section');
+        }
+    }
+
+    function resetForm() {
+        document.getElementById('tool-id-text').value = '';
+        currentToolData = {};
+        for(let i = 2; i <= 6; i++) {
+            document.getElementById(yes-btn-${i}).classList.remove('selected-yes');
+            document.getElementById(no-btn-${i}).classList.remove('selected-no');
+            document.getElementById(na-btn-${i}).classList.remove('selected-na');
+            document.getElementById(fail-notes-${i}).style.display = 'none';
+            document.getElementById(notes-text-${i}).value = '';
+        }
+        // Reset file inputs
+        document.querySelectorAll('input[type="file"]').forEach(input => input.value = '');
+    }
+
+    // --- Phase 4 & 5: Signature & Submission ---
+    let canvas, ctx, isDrawing = false;
+
+    function initSignaturePad() {
+        canvas = document.getElementById('signature-pad');
+        ctx = canvas.getContext('2d');
+        
+        // Resize canvas correctly for CSS scaling
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        
+        // Touch support
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e.touches[0]); });
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e.touches[0]); });
+        canvas.addEventListener('touchend', stopDrawing);
+    }
+
+    function startDrawing(e) {
+        isDrawing = true;
+        ctx.beginPath();
+        ctx.moveTo(e.offsetX || e.clientX - canvas.getBoundingClientRect().left, 
+                   e.offsetY || e.clientY - canvas.getBoundingClientRect().top);
+    }
+
+    function draw(e) {
+        if (!isDrawing) return;
+        ctx.lineTo(e.offsetX || e.clientX - canvas.getBoundingClientRect().left, 
+                   e.offsetY || e.clientY - canvas.getBoundingClientRect().top);
+        ctx.stroke();
+    }
+
+    function stopDrawing() { isDrawing = false; }
+    function clearSignature() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+
+    function submitToSupabase() {
+        const signatureBase64 = canvas.toDataURL('image/png');
+        
+        // This is the precise JSON structure to send to your Supabase Edge Function
+        const payload = {
+            projectCode: currentProject,
+            timestamp: new Date().toISOString(),
+            managerSignature: signatureBase64,
+            totalInspected: inspectedTools.length,
+            unsafeCount: inspectedTools.filter(t => !t.isSafe).length,
+            safeCount: inspectedTools.filter(t => t.isSafe).length,
+            toolsData: inspectedTools 
+        };
+
+        console.log("Saving to Supabase:", payload);
+        
+        // Simulate network delay
+        setTimeout(() => {
+            showSection('success-section');
+        }, 1000);
+    }
+</script>
+</body>
+</html>
