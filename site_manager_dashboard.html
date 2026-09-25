@@ -12,6 +12,7 @@
             --text-color: #333;
             --danger-color: #dc3545;
             --success-color: #28a745;
+            --ai-color: #6f42c1;
         }
         body {
             font-family: Arial, sans-serif;
@@ -41,18 +42,6 @@
         .section { display: none; }
         .section.active { display: block; }
         
-        .form-group { margin-bottom: 20px; }
-        label { display: block; font-weight: bold; margin-bottom: 8px; }
-        input[type="text"], input[type="number"], textarea {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-            font-size: 16px;
-        }
-        input[type="file"] { margin-top: 10px; width: 100%; }
-        
         .btn {
             background-color: var(--primary-color);
             color: white;
@@ -65,26 +54,37 @@
             width: 100%;
             margin-top: 10px;
         }
-        .btn:disabled { background-color: #ccc; cursor: not-allowed; }
-        .btn-danger { background-color: var(--danger-color); }
         .btn-success { background-color: var(--success-color); }
-        .btn-warning { background-color: #ffc107; color: #333; }
+        .btn-ai { background-color: var(--ai-color); display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-ai.listening { animation: pulse 1.5s infinite; background-color: #dc3545; }
         
-        .yn-group { display: flex; gap: 10px; margin-bottom: 15px; }
-        .yn-btn {
-            flex: 1;
-            padding: 12px;
-            border: 2px solid #ccc;
-            background: white;
-            font-size: 16px;
-            cursor: pointer;
-            border-radius: 4px;
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); box-shadow: 0 0 15px rgba(220, 53, 69, 0.5); }
+            100% { transform: scale(1); }
         }
-        .yn-btn.selected-yes { border-color: var(--success-color); background: #e8f5e9; }
-        .yn-btn.selected-no { border-color: var(--danger-color); background: #ffebee; }
-        .yn-btn.selected-na { border-color: #6c757d; background: #e2e3e5; }
+
+        /* Conversational UI Elements */
+        .chat-box {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            min-height: 150px;
+        }
+        .ai-message { color: var(--ai-color); font-weight: bold; margin-bottom: 10px; line-height: 1.5; }
+        .user-transcript { color: #555; font-style: italic; border-left: 3px solid #ccc; padding-left: 10px; margin-bottom: 15px; }
         
-        .fail-notes { display: none; margin-top: 15px; background: #fff3f3; padding: 15px; border-left: 4px solid var(--danger-color); }
+        .photo-upload-container {
+            display: none; /* Revealed by AI when needed */
+            margin-top: 15px;
+            padding: 15px;
+            background: #eef2f5;
+            border-radius: 4px;
+            border: 1px dashed #adb5bd;
+        }
+        input[type="file"] { width: 100%; margin-top: 10px; }
         
         #signature-pad {
             border: 2px solid #ccc;
@@ -96,19 +96,6 @@
             box-sizing: border-box;
         }
         
-        .voice-indicator {
-            display: none;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            padding: 15px;
-            background: #e9ecef;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            font-style: italic;
-            font-weight: bold;
-        }
-
         footer {
             background-color: var(--secondary-color);
             color: white;
@@ -128,46 +115,50 @@
         <div id="brand-slogan" class="slogan"></div>
     </div>
 
-    <!-- 1. PUWER Briefing Section -->
+    <!-- 1. PUWER Briefing Section (Audio completely removed, text only) -->
     <div id="briefing-section" class="section active">
         <h3 id="audit-title">PUWER Audit</h3>
         
-        <button id="play-audio-btn" class="btn btn-warning" onclick="acknowledgeBriefing()">Review Safety Briefing</button>
-        
-        <div id="audio-status-container" class="voice-indicator">
-            <span id="audio-status">⏳ Processing Briefing...</span>
-        </div>
-
-        <p id="briefing-text" style="line-height: 1.6; color: #555; margin-top: 20px; padding: 15px; background: #f9f9f9; border-left: 4px solid var(--warning-color);">
+        <p style="line-height: 1.6; color: #555; margin-bottom: 25px; padding: 15px; background: #f9f9f9; border-left: 4px solid var(--primary-color);">
             "Welcome to the safety inspection module. Under the Provision and Use of Work Equipment Regulations (PUWER), it is your legal responsibility to ensure all tools operated on this site are safe. Any equipment deemed unsafe must be immediately withdrawn from use and documented. Your diligence protects lives."
         </p>
 
-        <button class="btn btn-success" id="start-inspection-btn" disabled onclick="startInspection()">Start PUWER Inspection</button>
+        <button class="btn btn-success" onclick="startInspection()">Start PUWER Inspection</button>
     </div>
 
-    <!-- 2. Dynamic Inspection Form Section -->
+    <!-- 2. AI Conversational Form Section -->
     <div id="inspection-section" class="section">
         <h3 id="tool-counter">Inspecting Tool #1</h3>
-        <div id="question-container">
-            <div id="q1" class="question-block active">
-                <label>1. Tool Identification & Ownership</label>
-                <p style="font-size: 14px; color: #666;">Provide contractor name, tool type, and serial/asset number.</p>
-                <textarea id="tool-id-text" rows="3" placeholder="e.g., Subcontractor: Smith Electricals | Tool: Makita 18V Drill | Serial: 994830"></textarea>
-                <label style="margin-top:15px;">Upload Identification Photo:</label>
-                <input type="file" accept="image/*" capture="environment">
+        
+        <div class="chat-box">
+            <div id="ai-output" class="ai-message">
+                Tap the microphone below to connect to the AI Safety Inspector and begin the audit.
             </div>
-            <div id="safety-questions"></div>
+            <div id="user-input" class="user-transcript" style="display: none;">
+                ...
+            </div>
+            
+            <!-- Photo upload block dynamically revealed by the AI logic -->
+            <div id="photo-request" class="photo-upload-container">
+                <label id="photo-label" style="font-weight: bold; color: #333;">📸 Please upload the required photo:</label>
+                <input type="file" id="current-photo-upload" accept="image/*" capture="environment">
+            </div>
         </div>
-        <div style="display: flex; gap: 10px; margin-top: 20px;">
-            <button class="btn" onclick="nextTool()">Inspect Another Tool</button>
-            <button class="btn btn-success" onclick="finishInspection()">Generate Report</button>
+
+        <button id="ai-mic-btn" class="btn btn-ai" onclick="toggleMic()">
+            🎤 <span>Tap to Speak</span>
+        </button>
+
+        <div style="display: flex; gap: 10px; margin-top: 30px;">
+            <button class="btn" onclick="nextTool()">Next Tool</button>
+            <button class="btn btn-success" onclick="finishInspection()">Finish & Sign</button>
         </div>
     </div>
 
     <!-- 3. Signature Section -->
     <div id="signature-section" class="section">
         <h3>Sign Off Inspection</h3>
-        <p>By signing below, I confirm that I have carried out this PUWER inspection accurately.</p>
+        <p>By signing below, I confirm that the details provided to the AI assistant are accurate.</p>
         <canvas id="signature-pad"></canvas>
         <button class="btn" style="background: #ccc; color: #333; margin-bottom: 10px;" onclick="clearSignature()">Clear Signature</button>
         <button class="btn btn-success" onclick="submitToSupabase()">Sign & Submit to Database</button>
@@ -185,17 +176,8 @@
 
 <script>
     let currentProject = '';
-    let inspectedTools = [];
-    let currentToolData = {};
+    let isListening = false;
     
-    const safetyCriteria = [
-        "2. Electrical & Power Safety: Are cables, plugs, and battery housings intact with no exposed wires?",
-        "3. Physical Integrity: Is the tool casing free from significant cracks, breaks, or structural damage?",
-        "4. Guards & Mechanical: Are all manufacturer safety guards present, secure, and functioning?",
-        "5. Emergency Controls: Do all switches and emergency cut-offs operate cleanly without sticking?",
-        "6. General Suitability: Is the tool fit for its intended purpose on this specific site?"
-    ];
-
     document.addEventListener('DOMContentLoaded', () => {
         // Safe check for project number
         const savedProj = localStorage.getItem('currentProjectNumber');
@@ -204,29 +186,24 @@
             document.getElementById('audit-title').innerText = PUWER Audit - Project ${savedProj};
         }
 
-        // Safe loading of branding data
+        // Apply branding
         try {
             const brandingData = localStorage.getItem('hseBranding');
             if(brandingData) {
                 const branding = JSON.parse(brandingData);
                 document.documentElement.style.setProperty('--primary-color', branding.primaryColor || '#0056b3');
                 document.documentElement.style.setProperty('--secondary-color', branding.secondaryColor || '#2c3e50');
-                
                 if(branding.companyName) document.getElementById('brand-title').innerText = branding.companyName;
                 if(branding.slogan) document.getElementById('brand-slogan').innerText = branding.slogan;
                 if(branding.footerText) document.getElementById('brand-footer').innerText = branding.footerText;
-                
                 if(branding.logoBase64) {
                     const logoImg = document.getElementById('brand-logo');
                     logoImg.src = branding.logoBase64;
                     logoImg.style.display = 'block';
                 }
             }
-        } catch (error) {
-            console.error("Branding load failed. Using defaults.", error);
-        }
-
-        renderSafetyQuestions();
+        } catch (e) { console.error("Branding load error", e); }
+        
         initSignaturePad();
     });
 
@@ -235,129 +212,68 @@
         document.getElementById(id).classList.add('active');
     }
 
-    // Bulletproof Unlock Function - No Native Audio Dependency
-    function acknowledgeBriefing() {
-        document.getElementById('play-audio-btn').style.display = 'none';
-        document.getElementById('audio-status-container').style.display = 'flex';
-        
-        // Unbreakable 2.5 second timer
-        setTimeout(() => {
-            document.getElementById('start-inspection-btn').disabled = false;
-            document.getElementById('audio-status').innerText = "✅ Briefing Acknowledged. You may proceed.";
-            document.getElementById('audio-status-container').style.backgroundColor = "#d4edda";
-            document.getElementById('audio-status-container').style.color = "#155724";
-        }, 2500);
-    }
-
     function startInspection() {
         showSection('inspection-section');
-        document.getElementById('tool-counter').innerText = Inspecting Tool #${inspectedTools.length + 1};
     }
 
-    function renderSafetyQuestions() {
-        const container = document.getElementById('safety-questions');
-        safetyCriteria.forEach((q, index) => {
-            const qId = index + 2;
-            container.innerHTML += `
-                <div class="form-group" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 15px;">
-                    <label>${q}</label>
-                    <div class="yn-group">
-                        <button type="button" class="yn-btn" id="yes-btn-${qId}" onclick="handleYN(${qId}, 'yes')">Yes</button>
-                        <button type="button" class="yn-btn" id="no-btn-${qId}" onclick="handleYN(${qId}, 'no')">No</button>
-                        <button type="button" class="yn-btn" id="na-btn-${qId}" onclick="handleYN(${qId}, 'na')">N/A</button>
-                    </div>
-                    <div id="fail-notes-${qId}" class="fail-notes">
-                        <label style="color: var(--danger-color);">⚠️ Action Required: Note Defect</label>
-                        <textarea id="notes-text-${qId}" rows="2" placeholder="Detail the fault..."></textarea>
-                    </div>
-                </div>
-            `;
-        });
-    }
-
-    function handleYN(qId, answer) {
-        const yesBtn = document.getElementById(yes-btn-${qId});
-        const noBtn = document.getElementById(no-btn-${qId});
-        const naBtn = document.getElementById(na-btn-${qId});
-        const notes = document.getElementById(fail-notes-${qId});
+    // --- AI API Integration Hooks ---
+    function toggleMic() {
+        const btn = document.getElementById('ai-mic-btn');
+        const aiText = document.getElementById('ai-output');
+        const userText = document.getElementById('user-input');
         
-        yesBtn.classList.remove('selected-yes');
-        noBtn.classList.remove('selected-no');
-        naBtn.classList.remove('selected-na');
-        
-        if(answer === 'yes') {
-            yesBtn.classList.add('selected-yes');
-            notes.style.display = 'none';
-        } else if (answer === 'no') {
-            noBtn.classList.add('selected-no');
-            notes.style.display = 'block';
-        } else if (answer === 'na') {
-            naBtn.classList.add('selected-na');
-            notes.style.display = 'none';
+        if (!isListening) {
+            // START LISTENING (Hook your AI API connection here)
+            isListening = true;
+            btn.classList.add('listening');
+            btn.innerHTML = '🛑 <span>Stop Speaking</span>';
+            userText.style.display = 'block';
+            userText.innerText = "Listening to your response...";
+            
+            // Example of UI update from AI
+            aiText.innerText = "Please provide the contractor name, tool type, and asset number.";
+            
+        } else {
+            // STOP LISTENING (Send audio to AI API here)
+            isListening = false;
+            btn.classList.remove('listening');
+            btn.innerHTML = '🎤 <span>Tap to Speak</span>';
+            userText.innerText = "Transcribed: 'It's a Makita drill from Smith Electricals, ID 994830.'";
+            
+            // Trigger Photo Upload Request from AI logic
+            triggerPhotoRequest("Tool Identification Photo");
         }
-        currentToolData[q${qId}] = answer;
     }
 
-    function captureCurrentTool() {
-        const idText = document.getElementById('tool-id-text').value;
-        if(!idText) {
-            alert("Please provide the tool identification details.");
-            return false;
-        }
-
-        let isSafe = true;
-        let failDetails = [];
-
-        for(let i = 2; i <= 6; i++) {
-            const answer = currentToolData[q${i}];
-            if (!answer) {
-                alert(Please answer Question ${i});
-                return false;
-            }
-            if (answer === 'no') {
-                isSafe = false;
-                const note = document.getElementById(notes-text-${i}).value;
-                failDetails.push({ question: safetyCriteria[i-2], inspectorNote: note });
-            }
-        }
-
-        inspectedTools.push({
-            identification: idText,
-            isSafe: isSafe,
-            failures: failDetails
-        });
-        return true;
+    function triggerPhotoRequest(context) {
+        document.getElementById('photo-request').style.display = 'block';
+        document.getElementById('photo-label').innerText = 📸 Please upload: ${context};
     }
+
+    // --- End AI API Hooks ---
 
     function nextTool() {
-        if(captureCurrentTool()) {
-            document.getElementById('tool-id-text').value = '';
-            currentToolData = {};
-            for(let i = 2; i <= 6; i++) {
-                document.getElementById(yes-btn-${i}).classList.remove('selected-yes');
-                document.getElementById(no-btn-${i}).classList.remove('selected-no');
-                document.getElementById(na-btn-${i}).classList.remove('selected-na');
-                document.getElementById(fail-notes-${i}).style.display = 'none';
-                document.getElementById(notes-text-${i}).value = '';
-            }
-            document.querySelectorAll('input[type="file"]').forEach(input => input.value = '');
-            document.getElementById('tool-counter').innerText = Inspecting Tool #${inspectedTools.length + 1};
-            window.scrollTo(0, 0);
-        }
+        // Reset UI for the next tool conversation
+        document.getElementById('ai-output').innerText = "Ready for the next tool. Tap the mic to begin.";
+        document.getElementById('user-input').style.display = 'none';
+        document.getElementById('photo-request').style.display = 'none';
+        document.getElementById('current-photo-upload').value = '';
+        
+        const counter = document.getElementById('tool-counter');
+        const currentCount = parseInt(counter.innerText.replace(/\D/g, '')) + 1;
+        counter.innerText = Inspecting Tool #${currentCount};
     }
 
     function finishInspection() {
-        if(captureCurrentTool()) {
-            showSection('signature-section');
-        }
+        showSection('signature-section');
     }
 
+    // --- Signature & Submission ---
     let canvas, ctx, isDrawing = false;
     function initSignaturePad() {
         canvas = document.getElementById('signature-pad');
         ctx = canvas.getContext('2d');
         
-        // Wait for section to be visible to correctly measure dimensions
         setTimeout(() => {
             canvas.width = canvas.offsetWidth;
             canvas.height = canvas.offsetHeight;
@@ -380,7 +296,6 @@
         ctx.moveTo(e.offsetX || (e.touches[0].clientX - rect.left), 
                    e.offsetY || (e.touches[0].clientY - rect.top));
     }
-
     function draw(e) {
         if (!isDrawing) return;
         const rect = canvas.getBoundingClientRect();
@@ -388,22 +303,12 @@
                    e.offsetY || (e.touches[0].clientY - rect.top));
         ctx.stroke();
     }
-
     function stopDrawing() { isDrawing = false; }
     function clearSignature() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
     function submitToSupabase() {
-        const signatureBase64 = canvas.toDataURL('image/png');
-        const payload = {
-            projectCode: currentProject,
-            timestamp: new Date().toISOString(),
-            managerSignature: signatureBase64,
-            totalInspected: inspectedTools.length,
-            unsafeCount: inspectedTools.filter(t => !t.isSafe).length,
-            safeCount: inspectedTools.filter(t => t.isSafe).length,
-            toolsData: inspectedTools 
-        };
-        console.log("Saving to Supabase:", payload);
+        // In the final version, the AI API will have pushed the structured JSON of the conversation 
+        // to a local array (like inspectedTools). You will bundle that here.
         setTimeout(() => { showSection('success-section'); }, 1000);
     }
 </script>
