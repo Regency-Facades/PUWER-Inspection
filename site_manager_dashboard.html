@@ -79,7 +79,6 @@
             margin-top: 15px;
             cursor: pointer;
         }
-        .start-btn:disabled { background-color: #6c757d; cursor: not-allowed; }
 
         .inspector-details {
             display: flex;
@@ -278,19 +277,15 @@
 </div>
 
 <script>
-    // ==========================================
-    // SUPABASE CONFIGURATION
-    // Replace these with your actual Supabase project details
-    // ==========================================
-    const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Supabase variables initialized globally using let to avoid redeclaration syntax errors
+    let supabaseUrl = 'YOUR_SUPABASE_URL';
+    let supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
+    let supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
     let currentProject = '';
     let isListening = false;
     let currentQuestionIndex = 0;
     
-    // Array to store the finalized answers for the database payload
     let inspectionData = [];
     let currentToolData = {};
 
@@ -307,7 +302,7 @@
         const savedProj = localStorage.getItem('currentProjectNumber');
         if(savedProj) {
             currentProject = savedProj;
-            document.getElementById('proj-header-sub').innerText = `Project ${savedProj}`;
+            document.getElementById('proj-header-sub').innerText = 'Project ' + savedProj;
         }
         initSignaturePad();
     });
@@ -355,14 +350,14 @@
 
     function selectStatus(status) {
         resetButtons();
-        document.getElementById(`btn-${status}`).classList.add('active');
-        document.getElementById(`btn-${status}`).style.opacity = '1';
+        document.getElementById('btn-' + status).classList.add('active');
+        document.getElementById('btn-' + status).style.opacity = '1';
         currentToolData.status = status;
     }
 
     function resetButtons() {
         ['pass', 'fail', 'na'].forEach(s => {
-            const btn = document.getElementById(`btn-${s}`);
+            const btn = document.getElementById('btn-' + s);
             btn.classList.remove('active');
             btn.style.opacity = '0.5';
         });
@@ -379,7 +374,6 @@
     }
 
     function nextQuestion() {
-        // Save answer for this specific step
         inspectionData.push({
             step: questions[currentQuestionIndex].mod,
             question: questions[currentQuestionIndex].text,
@@ -403,7 +397,6 @@
         showSection('signature-section');
     }
 
-    // Canvas Logic
     let canvas, ctx, isDrawing = false;
     function initSignaturePad() {
         canvas = document.getElementById('signature-pad');
@@ -415,12 +408,25 @@
         canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e.touches[0]); }, {passive: false});
         canvas.addEventListener('touchend', stopDrawing);
     }
-    function startDrawing(e) { isDrawing = true; ctx.beginPath(); const rect = canvas.getBoundingClientRect(); ctx.moveTo(e.offsetX || (e.touches[0].clientX - rect.left), e.offsetY || (e.touches[0].clientY - rect.top)); }
-    function draw(e) { if (!isDrawing) return; const rect = canvas.getBoundingClientRect(); ctx.lineTo(e.offsetX || (e.touches[0].clientX - rect.left), e.offsetY || (e.touches[0].clientY - rect.top)); ctx.stroke(); }
+    
+    function startDrawing(e) { 
+        isDrawing = true; 
+        ctx.beginPath(); 
+        const rect = canvas.getBoundingClientRect(); 
+        ctx.moveTo(e.offsetX || (e.touches[0].clientX - rect.left), e.offsetY || (e.touches[0].clientY - rect.top)); 
+    }
+    
+    function draw(e) { 
+        if (!isDrawing) return; 
+        const rect = canvas.getBoundingClientRect(); 
+        ctx.lineTo(e.offsetX || (e.touches[0].clientX - rect.left), e.offsetY || (e.touches[0].clientY - rect.top)); 
+        ctx.stroke(); 
+    }
+    
     function stopDrawing() { isDrawing = false; }
+    
     function clearSignature() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
-    // Send Database Payload
     async function submitToSupabase() {
         const submitBtn = document.getElementById('submit-db-btn');
         submitBtn.innerText = "Submitting...";
@@ -431,8 +437,7 @@
         const inspectorQuals = document.getElementById('inspector-quals').value;
         
         try {
-            // Push payload to Supabase 'puwer_inspections' table
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('puwer_inspections')
                 .insert([
                     { 
