@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSE Audit UK - Officer Dashboard</title>
+    <style>
+        /* Base Variables & Theming */
+        :root {
+            --primary-color: #0056b3;
+            --bg-color: #f4f4f9;
+            --text-color: #333;
+        }
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            background-color: var(--bg-color); 
+            color: var(--text-color);
+        }
+        
+        /* Layout & Navigation */
+        .sidebar {
+            width: 250px;
+            background: #2c3e50;
+            color: white;
+            position: fixed;
+            height: 100vh;
+            padding-top: 20px;
+        }
+        .sidebar h2 { text-align: center; margin-bottom: 30px; font-size: 20px; }
+        .sidebar-btn {
+            display: block;
+            width: 100%;
+            background: none;
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            text-align: left;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .sidebar-btn:hover, .sidebar-btn.active { background: #34495e; border-left: 4px solid var(--primary-color); }
+        .main-content { margin-left: 250px; padding: 40px; }
+        
+        /* Cards & Panels */
+        .panel { 
+            display: none; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+        }
+        .panel.active { display: block; }
+        h3 { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; }
+        
+        /* Forms & Inputs */
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input[type="text"], input[type="number"], input[type="color"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn:hover { opacity: 0.9; }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background-color: #f9f9f9; }
+        .action-btn { background-color: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px;}
+        .action-btn.print { background-color: #17a2b8; }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <h2 id="brand-title">HSE Audit UK</h2>
+        <button class="sidebar-btn active" onclick="switchTab('branding-panel', this)">Global Branding</button>
+        <button class="sidebar-btn" onclick="switchTab('project-panel', this)">Site & Manager Setup</button>
+        <button class="sidebar-btn" onclick="switchTab('reports-panel', this)">Inspection Reports</button>
+        <button class="sidebar-btn" style="margin-top: auto; border-top: 1px solid #444;" onclick="logout()">Log Out</button>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+        
+        <!-- 1. Global Branding Panel -->
+        <div id="branding-panel" class="panel active">
+            <h3>App-Wide Branding Configuration</h3>
+            <p>These settings will propagate to the mobile interface and all generated PDF safety reports.</p>
+            <div class="form-group">
+                <label for="company-name">Company Name (Text Logo)</label>
+                <input type="text" id="company-name" placeholder="e.g., Megadam Construct LTD">
+            </div>
+            <div class="form-group">
+                <label for="brand-color">Primary Brand Color</label>
+                <input type="color" id="brand-color" value="#0056b3">
+            </div>
+            <div class="form-group">
+                <label for="logo-url">Logo Image URL (For PDF Header)</label>
+                <input type="text" id="logo-url" placeholder="https://example.com/logo.png">
+            </div>
+            <button class="btn" onclick="saveBranding()">Save & Apply Branding</button>
+        </div>
+
+        <!-- 2. Site & Manager Setup Panel -->
+        <div id="project-panel" class="panel">
+            <h3>Site Manager Access Control</h3>
+            <p>Assign a 4-digit project code to generate secure login credentials for a site manager.</p>
+            
+            <div style="display: flex; gap: 20px;">
+                <div class="form-group" style="flex: 1;">
+                    <label for="manager-name">Site Manager Name</label>
+                    <input type="text" id="manager-name" placeholder="e.g., John Smith">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label for="project-code">4-Digit Project Code</label>
+                    <input type="number" id="project-code" placeholder="e.g., 1761">
+                </div>
+            </div>
+            <button class="btn" onclick="addProject()">Authorize Manager Access</button>
+
+            <table id="projects-table">
+                <thead>
+                    <tr>
+                        <th>Project Code</th>
+                        <th>Manager Name</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="projects-list">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 3. Inspection Reports Viewer -->
+        <div id="reports-panel" class="panel">
+            <h3>PUWER Inspection Reports</h3>
+            <div class="form-group">
+                <label for="filter-project">Group by Project / Site:</label>
+                <select id="filter-project" style="padding: 8px; width: 250px; border-radius: 4px; border: 1px solid #ccc;">
+                    <option value="all">View All Projects</option>
+                    <option value="1761">Project 1761</option>
+                    <option value="1479">Project 1479</option>
+                </select>
+                <button class="btn" style="margin-left: 10px;" onclick="loadReports()">Apply Filter</button>
+            </div>
+
+            <table id="reports-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Project Code</th>
+                        <th>Contractor</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="reports-list">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script>
+        // Apply saved branding on load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadBranding();
+            renderProjects();
+        });
+
+        // Tab Switching Logic
+        function switchTab(panelId, btnElement) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(panelId).classList.add('active');
+            btnElement.classList.add('active');
+        }
+
+        // 1. Branding Logic
+        function saveBranding() {
+            const config = {
+                companyName: document.getElementById('company-name').value,
+                color: document.getElementById('brand-color').value,
+                logoUrl: document.getElementById('logo-url').value
+            };
+            localStorage.setItem('hseBranding', JSON.stringify(config));
+            applyBranding(config);
+            alert('Branding saved. This will now apply to all mobile interfaces and PDFs.');
+        }
+
+        function loadBranding() {
+            const saved = localStorage.getItem('hseBranding');
+            if (saved) {
+                const config = JSON.parse(saved);
+                document.getElementById('company-name').value = config.companyName;
+                document.getElementById('brand-color').value = config.color;
+                document.getElementById('logo-url').value = config.logoUrl;
+                applyBranding(config);
+            }
+        }
+
+        function applyBranding(config) {
+            document.documentElement.style.setProperty('--primary-color', config.color);
+            if(config.companyName) {
+                document.getElementById('brand-title').innerText = config.companyName;
+            }
+        }
+
+        // 2. Project & Manager Setup Logic
+        function addProject() {
+            const name = document.getElementById('manager-name').value;
+            const code = document.getElementById('project-code').value;
+            
+            if(code.length !== 4 || !name) {
+                alert("Please enter a valid manager name and a 4-digit project code.");
+                return;
+            }
+
+            let projects = JSON.parse(localStorage.getItem('hseProjects') || '[]');
+            projects.push({ code, name, status: 'Active' });
+            localStorage.setItem('hseProjects', JSON.stringify(projects));
+            
+            document.getElementById('manager-name').value = '';
+            document.getElementById('project-code').value = '';
+            renderProjects();
+        }
+
+        function renderProjects() {
+            let projects = JSON.parse(localStorage.getItem('hseProjects') || '[]');
+            const list = document.getElementById('projects-list');
+            list.innerHTML = '';
+            
+            projects.forEach((p, index) => {
+                list.innerHTML += `
+                    <tr>
+                        <td><strong>${p.code}</strong></td>
+                        <td>${p.name}</td>
+                        <td><span style="color: green;">${p.status}</span></td>
+                        <td><button class="action-btn print" onclick="removeProject(${index})">Revoke Access</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        function removeProject(index) {
+            let projects = JSON.parse(localStorage.getItem('hseProjects') || '[]');
+            projects.splice(index, 1);
+            localStorage.setItem('hseProjects', JSON.stringify(projects));
+            renderProjects();
+        }
+
+        // 3. Reports Logic (Placeholder for Supabase integration)
+        function loadReports() {
+            // In the final version, this will be a Supabase GET request filtering by project_code
+            const filter = document.getElementById('filter-project').value;
+            const list = document.getElementById('reports-list');
+            list.innerHTML = `
+                <tr>
+                    <td>25-Sep-2026</td>
+                    <td>1761</td>
+                    <td>Electrical Sub-Contractor</td>
+                    <td>3 Failed Tools</td>
+                    <td>
+                        <button class="action-btn" onclick="generatePDF()">Download PDF</button>
+                        <button class="action-btn print" onclick="window.print()">Print</button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function generatePDF() {
+            // PDF generator logic goes here (e.g., using jsPDF)
+            // It will read the localStorage 'hseBranding' to color the header and stamp the logo
+            alert("Generating branded PDF summary...");
+        }
+
+        function logout() {
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
