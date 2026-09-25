@@ -3,205 +3,319 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HSE Audit UK - Mobile Inspection</title>
+    <title>PUWER Inspection App</title>
     <style>
         :root {
-            --primary-color: #0056b3;
-            --secondary-color: #2c3e50;
-            --bg-color: #f4f4f9;
-            --text-color: #333;
-            --success-color: #28a745;
-            --ai-color: #6f42c1;
+            --app-dark: #0f4c5c;
+            --app-light-bg: #f4f7f6;
+            --btn-pass: #198754;
+            --btn-fail: #dc3545;
+            --btn-na: #343a40;
+            --mic-active: #20c997;
+            --mic-border: #a3e8d3;
+            --box-border: #dee2e6;
         }
         body {
             font-family: Arial, sans-serif;
             margin: 0;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            background-color: var(--app-light-bg);
+            color: #333;
             display: flex;
             flex-direction: column;
             min-height: 100vh;
         }
-        .container {
-            max-width: 600px;
-            margin: 20px auto;
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            flex-grow: 1;
-            width: 90%;
-            box-sizing: border-box;
+        
+        /* Top Navigation matching the screenshot */
+        .app-header {
+            background-color: var(--app-dark);
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .header-brand { text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #eee; }
-        .header-brand img { max-height: 60px; display: none; margin: 0 auto 10px; }
-        h2, h3 { color: var(--primary-color); margin-top: 0; }
-        .slogan { font-style: italic; color: #666; font-size: 14px; }
-        
-        .section { display: none; }
-        .section.active { display: block; }
-        
-        .btn {
-            background-color: var(--primary-color);
+        .header-title { font-size: 16px; font-weight: bold; display: flex; align-items: center; gap: 10px; }
+        .header-subtitle { font-size: 10px; font-weight: normal; opacity: 0.8; display: block; }
+        .stop-mic-btn {
+            background-color: var(--btn-fail);
             color: white;
             border: none;
-            padding: 15px 20px;
+            padding: 8px 12px;
             border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
             cursor: pointer;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 15px;
+            flex-grow: 1;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .section { display: none; }
+        .section.active { display: block; }
+
+        /* Initial Briefing Section */
+        .briefing-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            margin-top: 20px;
+        }
+        .start-btn {
+            background-color: var(--btn-pass);
+            color: white;
+            border: none;
+            padding: 15px;
+            width: 100%;
+            border-radius: 4px;
             font-size: 16px;
             font-weight: bold;
-            width: 100%;
-            margin-top: 10px;
+            margin-top: 15px;
+            cursor: pointer;
         }
-        .btn-success { background-color: var(--success-color); }
-        .btn-ai { background-color: var(--ai-color); display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 18px; padding: 20px; }
-        .btn-ai.listening { animation: pulse 1.5s infinite; background-color: #dc3545; }
+
+        /* Inspector Details */
+        .inspector-details {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .input-box {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--box-border);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        /* Main Inspection Card */
+        .inspection-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            text-align: center;
+            margin-bottom: 20px;
+        }
         
+        /* Central Mic Button */
+        .mic-wrapper {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .huge-mic-btn {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            background-color: var(--mic-active);
+            color: white;
+            border: 8px solid var(--mic-border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .huge-mic-btn.pulsing {
+            animation: pulse 1.5s infinite;
+            background-color: var(--btn-fail);
+            border-color: #f5c2c7;
+        }
         @keyframes pulse {
             0% { transform: scale(1); }
-            50% { transform: scale(1.02); box-shadow: 0 0 15px rgba(220, 53, 69, 0.5); }
+            50% { transform: scale(1.05); }
             100% { transform: scale(1); }
         }
 
-        /* Conversational UI Elements */
-        .chat-box {
+        .module-title { font-size: 12px; font-weight: bold; color: var(--app-dark); text-transform: uppercase; margin-bottom: 5px; }
+        .question-text { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 20px; min-height: 50px; }
+
+        /* Response Box */
+        .response-box {
             background: #f8f9fa;
-            border: 1px solid #e9ecef;
+            border: 1px solid var(--box-border);
             border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            min-height: 150px;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .ai-message { color: var(--ai-color); font-weight: bold; margin-bottom: 10px; line-height: 1.5; font-size: 16px; }
-        .user-transcript { color: #555; font-style: italic; border-left: 3px solid #ccc; padding-left: 10px; margin-bottom: 15px; }
-        
-        .photo-upload-container {
-            display: none; 
-            margin-top: 15px;
             padding: 15px;
-            background: #eef2f5;
-            border-radius: 4px;
-            border: 2px dashed #adb5bd;
+            text-align: left;
+            margin-bottom: 20px;
         }
-        input[type="file"] { width: 100%; margin-top: 10px; }
+        .response-label { font-size: 10px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 10px; display: block; }
+        .response-text { font-style: italic; color: #555; min-height: 40px; }
         
+        /* Pass / Fail / NA Buttons */
+        .action-row { display: flex; gap: 10px; }
+        .action-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            opacity: 0.5;
+            transition: 0.2s;
+        }
+        .action-btn.active { opacity: 1; border: 2px solid #000; }
+        .btn-pass { background-color: var(--btn-pass); }
+        .btn-fail { background-color: var(--btn-fail); }
+        .btn-na { background-color: var(--btn-na); }
+
+        /* Photo Attachment Box */
+        .photo-box {
+            background: #eef2f5;
+            border: 1px solid #cce5ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .photo-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .photo-title { font-weight: bold; font-size: 14px; color: #333; }
+        .photo-badge { background: #cfe2ff; color: #084298; padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; }
+        .photo-controls { display: flex; gap: 10px; align-items: center; }
+        .choose-file-btn { background: #0d6efd; color: white; padding: 10px 15px; border-radius: 4px; font-weight: bold; border: none; font-size: 14px; cursor: pointer; }
+        .skip-btn { background: #e2e3e5; color: #333; padding: 10px 15px; border-radius: 4px; font-weight: bold; border: none; font-size: 14px; margin-left: auto; cursor: pointer; }
+        input[type="file"] { display: none; }
+
+        /* Signature Section */
         #signature-pad {
-            border: 2px solid #ccc;
+            border: 2px solid var(--box-border);
             border-radius: 4px;
             width: 100%;
             height: 200px;
             cursor: crosshair;
             touch-action: none; 
-            box-sizing: border-box;
-            background: #fff;
-        }
-        
-        footer {
-            background-color: var(--secondary-color);
-            color: white;
-            text-align: center;
-            padding: 15px;
-            margin-top: auto;
-            font-size: 14px;
+            background: white;
+            margin-bottom: 15px;
         }
     </style>
 </head>
 <body>
 
+<div class="app-header">
+    <div class="header-title">
+        🔧 <div>PUWER INSPECTION APP <span class="header-subtitle" id="proj-header-sub">Interactive Equipment Compliance</span></div>
+    </div>
+    <button class="stop-mic-btn" onclick="toggleMic()">⏵ STOP MIC</button>
+</div>
+
 <div class="container">
-    <div class="header-brand">
-        <img id="brand-logo" src="" alt="Company Logo">
-        <h2 id="brand-title">HSE Audit UK</h2>
-        <div id="brand-slogan" class="slogan"></div>
-    </div>
 
-    <!-- 1. Text-Only Briefing Section (Audio Removed, Instant Start) -->
+    <!-- 1. Text Briefing Section -->
     <div id="briefing-section" class="section active">
-        <h3 id="audit-title">PUWER Audit</h3>
-        
-        <p style="line-height: 1.6; color: #555; margin-bottom: 25px; padding: 15px; background: #f9f9f9; border-left: 4px solid var(--primary-color);">
-            "Welcome to the safety inspection module. Under the Provision and Use of Work Equipment Regulations (PUWER), it is your legal responsibility to ensure all tools operated on this site are safe. Any equipment deemed unsafe must be immediately withdrawn from use and documented."
-        </p>
-
-        <button class="btn btn-success" onclick="startInspection()">Start PUWER Inspection</button>
+        <div class="briefing-card">
+            <h3 style="color: var(--app-dark); margin-top: 0;">PUWER Audit Briefing</h3>
+            <p style="line-height: 1.6; color: #555;">
+                Welcome to the safety inspection module. Under the Provision and Use of Work Equipment Regulations (PUWER), it is your legal responsibility to ensure all tools operated on this site are safe. Any equipment deemed unsafe must be immediately withdrawn from use and documented.
+            </p>
+            <button class="start-btn" onclick="startInspection()">Start PUWER Inspection</button>
+        </div>
     </div>
 
-    <!-- 2. AI Conversational Form Section -->
+    <!-- 2. Main Conversational UI -->
     <div id="inspection-section" class="section">
-        <h3 id="tool-counter">Inspecting Tool #1</h3>
         
-        <div class="chat-box">
-            <div id="ai-output" class="ai-message">
-                Tap the microphone below to connect to the AI Safety Inspector and begin the audit.
+        <div class="inspector-details">
+            <input type="text" class="input-box" placeholder="Inspector Name" id="inspector-name">
+            <input type="text" class="input-box" placeholder="Qualifications" value="Competent Person">
+        </div>
+
+        <div class="inspection-card">
+            <div class="mic-wrapper">
+                <button id="main-mic-btn" class="huge-mic-btn" onclick="toggleMic()">
+                    🎤<br><span id="mic-label">Speak</span>
+                </button>
             </div>
-            <div id="user-input" class="user-transcript" style="display: none;"></div>
             
-            <div id="photo-request" class="photo-upload-container">
-                <label id="photo-label" style="font-weight: bold; color: #333;">📸 Please upload the required photo:</label>
-                <input type="file" id="current-photo-upload" accept="image/*" capture="environment">
+            <div id="module-title" class="module-title">MODULE 1 - PROJECT & SITE CONTEXT</div>
+            <div id="question-text" class="question-text">
+                Question 1: What is the tool or equipment name and serial or ID number?
+            </div>
+
+            <div class="response-box">
+                <span class="response-label">Inspector Response</span>
+                <div id="live-transcript" class="response-text">Tap the microphone to record your answer...</div>
+                
+                <div class="action-row" style="margin-top: 15px;">
+                    <button class="action-btn btn-pass" id="btn-pass" onclick="selectStatus('pass')">Pass (Yes)</button>
+                    <button class="action-btn btn-fail" id="btn-fail" onclick="selectStatus('fail')">Fail (No)</button>
+                    <button class="action-btn btn-na" id="btn-na" onclick="selectStatus('na')">N/A</button>
+                </div>
             </div>
         </div>
 
-        <button id="ai-mic-btn" class="btn btn-ai" onclick="toggleMic()">
-            🎤 <span>Tap to Speak</span>
-        </button>
-
-        <div style="display: flex; gap: 10px; margin-top: 30px;">
-            <button class="btn" onclick="nextTool()">Next Tool</button>
-            <button class="btn btn-success" onclick="finishInspection()">Finish & Sign</button>
+        <div class="photo-box">
+            <div class="photo-header">
+                <span class="photo-title">📷 Photo Attachment</span>
+                <span class="photo-badge">Optional / Recommended</span>
+            </div>
+            <p style="font-size: 12px; color: #555; margin-top: 0;">Would you like to attach a photo for this inspection step?</p>
+            <div class="photo-controls">
+                <button class="choose-file-btn" onclick="document.getElementById('file-upload').click()">Choose File</button>
+                <span id="file-name" style="font-size: 12px; color: #888;">no file selected</span>
+                <input type="file" id="file-upload" accept="image/*" capture="environment" onchange="updateFileName()">
+                <button class="skip-btn" onclick="nextQuestion()">Next Step ➔</button>
+            </div>
         </div>
+        
+        <button class="start-btn" onclick="finishInspection()" style="margin-top: 0;">☑️ Submit Inspection Report</button>
     </div>
 
     <!-- 3. Signature Section -->
     <div id="signature-section" class="section">
-        <h3>Sign Off Inspection</h3>
-        <p>By signing below, I confirm that the details provided to the AI assistant are accurate.</p>
-        <canvas id="signature-pad"></canvas>
-        <button class="btn" style="background: #e0e0e0; color: #333; margin-bottom: 10px;" onclick="clearSignature()">Clear Signature</button>
-        <button class="btn btn-success" onclick="submitToSupabase()">Sign & Submit to Database</button>
+        <div class="briefing-card">
+            <h3 style="color: var(--app-dark); margin-top: 0;">Sign Off Inspection</h3>
+            <p style="font-size: 14px; color: #555;">By signing below, I confirm that the details provided to the AI assistant are accurate.</p>
+            <canvas id="signature-pad"></canvas>
+            <div style="display: flex; gap: 10px;">
+                <button class="skip-btn" style="flex: 1; margin: 0;" onclick="clearSignature()">Clear</button>
+                <button class="start-btn" style="flex: 2; margin: 0;" onclick="submitToSupabase()">Sign & Submit Data</button>
+            </div>
+        </div>
     </div>
 
     <!-- 4. Success Section -->
     <div id="success-section" class="section">
-        <h3 style="color: var(--success-color);">Inspection Submitted!</h3>
-        <p>The report has been saved. You may close this window.</p>
-        <button class="btn" onclick="location.href='index.html'">Return to Portal</button>
+        <div class="briefing-card" style="text-align: center;">
+            <h3 style="color: var(--btn-pass); margin-top: 0;">Inspection Submitted!</h3>
+            <p>The report has been saved successfully.</p>
+            <button class="start-btn" onclick="location.href='index.html'">Return to Portal</button>
+        </div>
     </div>
-</div>
 
-<footer id="brand-footer">© 2026 HSE Audit UK</footer>
+</div>
 
 <script>
     let currentProject = '';
     let isListening = false;
+    let currentQuestionIndex = 0;
     
+    // The conversational flow matrix
+    const questions = [
+        { mod: "MODULE 1 - IDENTIFICATION", text: "Question 1: What is the tool or equipment name and serial or ID number?" },
+        { mod: "MODULE 2 - ELECTRICAL", text: "Question 2: Are cables, plugs, and battery housings intact with no exposed wires?" },
+        { mod: "MODULE 3 - INTEGRITY", text: "Question 3: Is the tool casing free from significant cracks, breaks, or structural damage?" },
+        { mod: "MODULE 4 - GUARDS", text: "Question 4: Are all manufacturer safety guards present, secure, and functioning?" },
+        { mod: "MODULE 5 - CONTROLS", text: "Question 5: Do all switches and emergency cut-offs operate cleanly without sticking?" },
+        { mod: "MODULE 6 - SUITABILITY", text: "Question 6: Is the tool fit for its intended purpose on this specific site?" }
+    ];
+
     document.addEventListener('DOMContentLoaded', () => {
         const savedProj = localStorage.getItem('currentProjectNumber');
         if(savedProj) {
             currentProject = savedProj;
-            document.getElementById('audit-title').innerText = "PUWER Audit - Project " + savedProj;
+            document.getElementById('proj-header-sub').innerText = Project ${savedProj};
         }
-
-        try {
-            const brandingData = localStorage.getItem('hseBranding');
-            if(brandingData) {
-                const branding = JSON.parse(brandingData);
-                if(branding.primaryColor) document.documentElement.style.setProperty('--primary-color', branding.primaryColor);
-                if(branding.secondaryColor) document.documentElement.style.setProperty('--secondary-color', branding.secondaryColor);
-                if(branding.companyName) document.getElementById('brand-title').innerText = branding.companyName;
-                if(branding.slogan) document.getElementById('brand-slogan').innerText = branding.slogan;
-                if(branding.footerText) document.getElementById('brand-footer').innerText = branding.footerText;
-                if(branding.logoBase64) {
-                    const logoImg = document.getElementById('brand-logo');
-                    logoImg.src = branding.logoBase64;
-                    logoImg.style.display = 'block';
-                }
-            }
-        } catch (e) { 
-            console.error("Branding load error", e); 
-        }
-        
         initSignaturePad();
     });
 
@@ -212,43 +326,75 @@
 
     function startInspection() {
         showSection('inspection-section');
+        loadQuestion(0);
+    }
+
+    function loadQuestion(index) {
+        currentQuestionIndex = index;
+        document.getElementById('module-title').innerText = questions[index].mod;
+        document.getElementById('question-text').innerText = questions[index].text;
+        document.getElementById('live-transcript').innerText = "Tap the microphone to record your answer...";
+        resetButtons();
+        document.getElementById('file-upload').value = '';
+        document.getElementById('file-name').innerText = "no file selected";
     }
 
     function toggleMic() {
-        const btn = document.getElementById('ai-mic-btn');
-        const aiText = document.getElementById('ai-output');
-        const userText = document.getElementById('user-input');
+        const btn = document.getElementById('main-mic-btn');
+        const label = document.getElementById('mic-label');
+        const transcript = document.getElementById('live-transcript');
         
         if (!isListening) {
             isListening = true;
-            btn.classList.add('listening');
-            btn.innerHTML = '🛑 <span>Stop Speaking</span>';
-            userText.style.display = 'block';
-            userText.innerText = "Listening to your response...";
-            aiText.innerText = "Please state the contractor name, tool type, and asset number.";
+            btn.classList.add('pulsing');
+            label.innerText = "Listening";
+            transcript.innerText = "Listening to your response...";
+            transcript.style.fontStyle = "italic";
         } else {
             isListening = false;
-            btn.classList.remove('listening');
-            btn.innerHTML = '🎤 <span>Tap to Speak</span>';
-            userText.innerText = "Transcribed: 'Makita drill from Smith Electricals, ID 994830.'";
-            triggerPhotoRequest("Tool Identification Plate");
+            btn.classList.remove('pulsing');
+            label.innerText = "Speak";
+            // Simulated AI transcription feedback
+            transcript.innerText = "Recorded response captured.";
+            transcript.style.fontStyle = "normal";
         }
     }
 
-    function triggerPhotoRequest(context) {
-        document.getElementById('photo-request').style.display = 'block';
-        document.getElementById('photo-label').innerText = "📸 Please upload: " + context;
+    function selectStatus(status) {
+        resetButtons();
+        document.getElementById(btn-${status}).classList.add('active');
+        document.getElementById(btn-${status}).style.opacity = '1';
     }
 
-    function nextTool() {
-        document.getElementById('ai-output').innerText = "Ready for the next tool. Tap the mic to begin.";
-        document.getElementById('user-input').style.display = 'none';
-        document.getElementById('photo-request').style.display = 'none';
-        document.getElementById('current-photo-upload').value = '';
-        
-        const counter = document.getElementById('tool-counter');
-        const currentCount = parseInt(counter.innerText.replace(/\D/g, '')) + 1;
-        counter.innerText = "Inspecting Tool #" + currentCount;
+    function resetButtons() {
+        ['pass', 'fail', 'na'].forEach(s => {
+            const btn = document.getElementById(btn-${s});
+            btn.classList.remove('active');
+            btn.style.opacity = '0.5';
+        });
+    }
+
+    function updateFileName() {
+        const input = document.getElementById('file-upload');
+        const label = document.getElementById('file-name');
+        if(input.files.length > 0) {
+            label.innerText = input.files[0].name;
+            label.style.color = "var(--btn-pass)";
+            label.style.fontWeight = "bold";
+        }
+    }
+
+    function nextQuestion() {
+        if(currentQuestionIndex < questions.length - 1) {
+            loadQuestion(currentQuestionIndex + 1);
+            window.scrollTo(0, 0);
+        } else {
+            if(confirm("All questions answered. Inspect another tool or finish report? \n\nClick OK for Next Tool, Cancel to Finish.")) {
+                loadQuestion(0); // loop back for another tool
+            } else {
+                finishInspection();
+            }
+        }
     }
 
     function finishInspection() {
@@ -281,20 +427,17 @@
         const rect = canvas.getBoundingClientRect();
         ctx.moveTo(e.offsetX || (e.touches[0].clientX - rect.left), e.offsetY || (e.touches[0].clientY - rect.top));
     }
-    
     function draw(e) {
         if (!isDrawing) return;
         const rect = canvas.getBoundingClientRect();
         ctx.lineTo(e.offsetX || (e.touches[0].clientX - rect.left), e.offsetY || (e.touches[0].clientY - rect.top));
         ctx.stroke();
     }
-    
     function stopDrawing() { isDrawing = false; }
-    
     function clearSignature() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
     function submitToSupabase() {
-        setTimeout(() => { showSection('success-section'); }, 1000);
+        setTimeout(() => { showSection('success-section'); }, 800);
     }
 </script>
 </body>
