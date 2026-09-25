@@ -26,13 +26,14 @@
         h3 { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; color: var(--ui-dark); }
         
         .form-group { margin-bottom: 20px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; }
-        input[type="text"], input[type="number"], input[type="color"], input[type="file"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; background-color: #fff; color: #333; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; font-size: 14px;}
+        input[type="text"], input[type="number"], input[type="password"], input[type="color"], input[type="file"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; background-color: #fff; color: #333; }
         .color-group { display: flex; gap: 20px; }
         .color-group > div { flex: 1; }
         
         .btn { background-color: var(--ui-blue); color: white; border: none; padding: 12px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 15px; }
         .btn:hover { background-color: #004494; }
+        .btn-success { background-color: #28a745; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 20px; border: 1px solid #ddd; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
@@ -49,11 +50,13 @@
         <h2 id="brand-title">HSE Audit UK</h2>
         <button class="sidebar-btn active" onclick="switchTab('branding-panel', this)">Global Branding</button>
         <button class="sidebar-btn" onclick="switchTab('project-panel', this)">Site & Manager Setup</button>
+        <button class="sidebar-btn" onclick="switchTab('database-panel', this)">Database Sync</button>
         <button class="sidebar-btn" onclick="switchTab('reports-panel', this)">Inspection Reports</button>
         <button class="sidebar-btn" style="margin-top: auto; border-top: 1px solid #444;" onclick="logout()">Log Out</button>
     </div>
 
     <div class="main-content">
+        <!-- 1. Branding Panel -->
         <div id="branding-panel" class="panel active">
             <h3>App-Wide Branding Configuration</h3>
             <div class="form-group"><label>Company Name</label><input type="text" id="company-name" placeholder="e.g., Regency Facades Ltd"></div>
@@ -67,6 +70,7 @@
             <button class="btn" onclick="saveBranding()">Save & Apply Branding</button>
         </div>
 
+        <!-- 2. Site Setup Panel -->
         <div id="project-panel" class="panel">
             <h3>Site Manager Access Control</h3>
             <div style="display: flex; gap: 20px;">
@@ -80,12 +84,31 @@
             </table>
         </div>
 
+        <!-- 3. Database Sync Panel (NEW) -->
+        <div id="database-panel" class="panel">
+            <h3>Supabase Connection Settings</h3>
+            <p style="color: #666; font-size: 14px;">Connect your dashboard to your live Supabase database to fetch inspection reports.</p>
+            
+            <div class="form-group">
+                <label>Supabase Project URL</label>
+                <input type="text" id="supa-url" placeholder="https://xxxxxx.supabase.co">
+            </div>
+            <div class="form-group">
+                <label>Supabase Anon/Public Key</label>
+                <input type="password" id="supa-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+            </div>
+            
+            <button class="btn btn-success" onclick="saveDatabaseSettings()">Save Connection Details</button>
+            <p id="db-status-msg" style="margin-top: 15px; font-weight: bold; display: none;"></p>
+        </div>
+
+        <!-- 4. Reports Panel -->
         <div id="reports-panel" class="panel">
             <h3>Live PUWER Inspection Reports</h3>
             <div class="form-group">
                 <label>Fetch Database Records by Project:</label>
                 <input type="number" id="filter-project" placeholder="e.g. 1761" style="padding: 10px; width: 250px; border-radius: 4px; border: 1px solid #ccc; display: inline-block;">
-                <button class="btn" style="margin-left: 10px;" onclick="loadReports()">Pull from Supabase</button>
+                <button class="btn btn-success" style="margin-left: 10px;" onclick="loadReports()">Pull from Supabase</button>
             </div>
             <table id="reports-table">
                 <thead>
@@ -104,16 +127,13 @@
     </div>
 
     <script>
-        // ==========================================
-        // SUPABASE CONFIGURATION
-        // ==========================================
-        const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Global Supabase Client Variable
+        let supabaseClient = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             loadBranding();
             renderProjects();
+            loadDatabaseSettings();
         });
 
         function switchTab(panelId, btnElement) {
@@ -123,29 +143,47 @@
             btnElement.classList.add('active');
         }
 
-        // ... [Branding and Project Setup logic remains exactly the same] ...
-        document.getElementById('logo-upload').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if(file) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    document.getElementById('logo-base64').value = event.target.result;
-                    document.getElementById('preview-logo').src = event.target.result;
-                    document.getElementById('preview-logo').style.display = 'block';
-                };
-                reader.readAsDataURL(file);
+        // --- Database Settings Logic ---
+        function saveDatabaseSettings() {
+            const url = document.getElementById('supa-url').value.trim();
+            const key = document.getElementById('supa-key').value.trim();
+            
+            if(!url || !key) {
+                alert("Please provide both the URL and the Key.");
+                return;
             }
-        });
 
-        function saveBranding() { /* Save logic */ }
-        function loadBranding() { /* Load logic */ }
-        function addProject() { /* Add Project Logic */ }
-        function renderProjects() { /* Render logic */ }
-        function removeProject(index) { /* Remove logic */ }
-        function logout() { window.location.href = 'index.html'; }
+            localStorage.setItem('supabaseConfig', JSON.stringify({ url: url, key: key }));
+            
+            // Initialize client immediately
+            supabaseClient = window.supabase.createClient(url, key);
+            
+            const msg = document.getElementById('db-status-msg');
+            msg.style.display = 'block';
+            msg.style.color = '#28a745';
+            msg.innerText = "✓ Credentials saved and Supabase client initialized.";
+        }
 
-        // Fetch Live Reports from Supabase
+        function loadDatabaseSettings() {
+            const saved = localStorage.getItem('supabaseConfig');
+            if (saved) {
+                const config = JSON.parse(saved);
+                document.getElementById('supa-url').value = config.url;
+                document.getElementById('supa-key').value = config.key;
+                
+                // Initialize client silently on load
+                supabaseClient = window.supabase.createClient(config.url, config.key);
+            }
+        }
+
+        // --- Fetch Live Reports from Supabase ---
         async function loadReports() {
+            if (!supabaseClient) {
+                alert("Please configure your Database Sync settings first.");
+                switchTab('database-panel', document.querySelectorAll('.sidebar-btn')[2]);
+                return;
+            }
+
             const projCode = document.getElementById('filter-project').value.trim();
             const list = document.getElementById('reports-list');
             
@@ -157,8 +195,7 @@
             list.innerHTML = `<tr><td colspan="4" style="text-align:center;">Fetching records from database...</td></tr>`;
 
             try {
-                // Fetch rows from 'puwer_inspections' where project_code matches
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('puwer_inspections')
                     .select('*')
                     .eq('project_code', projCode)
@@ -167,11 +204,11 @@
                 if (error) throw error;
 
                 if(data.length === 0) {
-                    list.innerHTML = `<tr><td colspan="4" style="text-align:center; color: red;">No reports found for Project ${projCode}</td></tr>`;
+                    list.innerHTML = `<tr><td colspan="4" style="text-align:center; color: #dc3545;">No reports found for Project ${projCode}</td></tr>`;
                     return;
                 }
 
-                list.innerHTML = ''; // clear table
+                list.innerHTML = ''; 
                 data.forEach(report => {
                     const formattedDate = new Date(report.created_at).toLocaleDateString('en-GB');
                     list.innerHTML += `
@@ -186,13 +223,100 @@
 
             } catch (error) {
                 console.error("Error fetching reports:", error);
-                list.innerHTML = `<tr><td colspan="4" style="text-align:center; color: red;">Database connection failed.</td></tr>`;
+                list.innerHTML = `<tr><td colspan="4" style="text-align:center; color: #dc3545;">Database connection failed. Please check your URL and Key.</td></tr>`;
             }
         }
 
         function viewReport(id) {
             alert("This will eventually generate the PDF for Database ID: " + id);
         }
+
+        // --- Branding & Project Logic ---
+        document.getElementById('logo-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    document.getElementById('logo-base64').value = event.target.result;
+                    document.getElementById('preview-logo').src = event.target.result;
+                    document.getElementById('preview-logo').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function saveBranding() {
+            const config = {
+                companyName: document.getElementById('company-name').value,
+                slogan: document.getElementById('company-slogan').value,
+                primaryColor: document.getElementById('brand-color-primary').value,
+                secondaryColor: document.getElementById('brand-color-secondary').value,
+                footerText: document.getElementById('footer-text').value,
+                logoBase64: document.getElementById('logo-base64').value
+            };
+            localStorage.setItem('hseBranding', JSON.stringify(config));
+            if(config.companyName) document.getElementById('brand-title').innerText = config.companyName;
+            alert('Branding saved successfully.');
+        }
+
+        function loadBranding() {
+            const saved = localStorage.getItem('hseBranding');
+            if (saved) {
+                const config = JSON.parse(saved);
+                document.getElementById('company-name').value = config.companyName || '';
+                document.getElementById('company-slogan').value = config.slogan || '';
+                document.getElementById('brand-color-primary').value = config.primaryColor || '#0056b3';
+                document.getElementById('brand-color-secondary').value = config.secondaryColor || '#2c3e50';
+                document.getElementById('footer-text').value = config.footerText || '';
+                
+                if(config.logoBase64) {
+                    document.getElementById('logo-base64').value = config.logoBase64;
+                    document.getElementById('preview-logo').src = config.logoBase64;
+                    document.getElementById('preview-logo').style.display = 'block';
+                }
+                if(config.companyName) document.getElementById('brand-title').innerText = config.companyName;
+            }
+        }
+
+        function addProject() {
+            const name = document.getElementById('manager-name').value.trim();
+            const code = document.getElementById('project-code').value.trim();
+            if(code.length !== 4 || !name) {
+                alert("Please enter a valid manager name and a 4-digit project code.");
+                return;
+            }
+            let projects = JSON.parse(localStorage.getItem('hseProjects') || '[]');
+            projects.push({ code, name, status: 'Active' });
+            localStorage.setItem('hseProjects', JSON.stringify(projects));
+            document.getElementById('manager-name').value = '';
+            document.getElementById('project-code').value = '';
+            renderProjects();
+        }
+
+        function renderProjects() {
+            let projects = JSON.parse(localStorage.getItem('hseProjects') || '[]');
+            const list = document.getElementById('projects-list');
+            list.innerHTML = '';
+            projects.forEach((p, index) => {
+                list.innerHTML += `
+                    <tr>
+                        <td><strong>${p.code}</strong></td>
+                        <td>${p.name}</td>
+                        <td><span style="color: #28a745; font-weight:bold;">${p.status}</span></td>
+                        <td><button class="action-btn" onclick="removeProject(${index})">Revoke</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        function removeProject(index) {
+            let projects = JSON.parse(localStorage.getItem('hseProjects') || '[]');
+            projects.splice(index, 1);
+            localStorage.setItem('hseProjects', JSON.stringify(projects));
+            renderProjects();
+        }
+
+        function logout() { window.location.href = 'index.html'; }
     </script>
 </body>
 </html>
