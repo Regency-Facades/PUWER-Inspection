@@ -6,6 +6,8 @@
     <title>PUWER Inspection App</title>
     <!-- Load Supabase Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Load jsPDF Library for Instant Mobile PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
             --app-dark: #0f4c5c;
@@ -280,8 +282,9 @@
     <div id="success-section" class="section">
         <div class="briefing-card" style="text-align: center;">
             <h3 style="color: var(--btn-pass); margin-top: 0;">Inspection Submitted!</h3>
-            <p>The report has been saved successfully.</p>
-            <button class="start-btn" onclick="location.href='index.html'">Return to Portal</button>
+            <p>The report has been saved successfully to Supabase.</p>
+            <button class="start-btn" style="background-color: #0d6efd; margin-bottom: 10px;" onclick="generatePDF()">📄 Download Official PDF Report</button>
+            <button class="start-btn" style="background-color: #6c757d; margin-top: 0;" onclick="location.href='index.html'">Return to Portal</button>
         </div>
     </div>
 </div>
@@ -289,6 +292,7 @@
 <script>
     let supabaseClient = null;
     let currentProject = '';
+    let lastSubmittedData = null; // Stores data for instant PDF generation
     
     // --- Web Speech API ---
     let isListening = false;
@@ -413,7 +417,6 @@
         document.getElementById('file-name').innerText = "no file selected";
         currentToolData.status = null; 
 
-        // Hide action buttons on Step 1 (Tool ID)
         if (index === 0) {
             document.getElementById('action-row').style.display = 'none';
         } else {
@@ -443,12 +446,10 @@
             btn.classList.remove('pulsing');
             label.innerText = "Speak";
             recognition.stop();
-            // Automatically process text with AI when mic is stopped
             processWithAI();
         }
     }
 
-    // --- Send Transcript to Supabase Edge Function ---
     async function processWithAI() {
         const transcript = document.getElementById('live-transcript').value.trim();
         if (!transcript || !supabaseClient) return;
@@ -466,13 +467,11 @@
             
             if (error) throw error;
             
-            // Auto-select status if the AI determined one
             if(data.status && data.status !== 'none') {
                 selectStatus(data.status);
             }
             
             document.getElementById('ai-status').innerText = "✅ AI Analysis Complete";
-            // Speak the AI's reply
             if(data.ai_response) {
                 speakPrompt(data.ai_response);
             }
@@ -578,6 +577,15 @@
         const inspectorName = document.getElementById('inspector-name').value || "Unknown Inspector";
         const inspectorQuals = document.getElementById('inspector-quals').value;
         
+        lastSubmittedData = {
+            project: currentProject,
+            inspector: inspectorName,
+            quals: inspectorQuals,
+            date: new Date().toLocaleDateString('en-GB'),
+            items: inspectionData,
+            signature: signatureBase64
+        };
+
         try {
             const { data, error } = await supabaseClient
                 .from('puwer_inspections')
@@ -600,6 +608,74 @@
             submitBtn.innerText = "Sign & Submit Data";
             submitBtn.disabled = false;
         }
+    }
+
+    // --- Instant Mobile PDF Generator ---
+    function generatePDF() {
+        if (!lastSubmittedData) {
+            alert("No inspection data found to generate PDF.");
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        // Header Banner
+        doc.setFillColor(15, 76, 92);
+        doc.rect(0, 0, 210, 25, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(14);
+        doc.text("PUWER SAFETY INSPECTION REPORT", 14, 16);
+
+        // Meta Details
+        doc.setTextColor(50, 50, 50);
+        doc.setFontSize(10);
+        doc.text(`Project Code: ${lastSubmittedData.project}`, 14, 35);
+        doc.text(`Inspector: ${lastSubmittedData.inspector} (${lastSubmittedData.quals})`, 14, 42);
+        doc.text(`Date: ${lastSubmittedData.date}`, 14, 49);
+
+        let yPos = 60;
+        doc.setLineWidth(0.5);
+        doc.line(14, 55, 196, 55);
+
+        // Loop through modules / questions
+        lastSubmittedData.items.forEach((item, index) => {
+            if (yPos > 260) {
+                doc.addPage();
+                yPos = 20;
+            }
+
+            doc.setFont("helvetica", "bold");
+            doc.text(`${item.step}`, 14, yPos);
+            yPos += 6;
+
+            doc.setFont("helvetica", "normal");
+            doc.text(`Status: ${item.status.toUpperCase()}`, 14, yPos);
+            yPos += 5;
+
+            const splitTranscript = doc.splitTextToSize(`Response: ${item.transcript || 'None provided'}`, 180);
+            doc.text(splitTranscript, 14, yPos);
+            yPos += (splitTranscript.length * 5) + 8;
+        });
+
+        // Add Signature Image at the bottom
+        if (yPos > 220) {
+            doc.addPage();
+            yPos = 20;
+        }
+
+        doc.setFont("helvetica", "bold");
+        doc.text("Authorized Signature:", 14, yPos);
+        yPos += 5;
+        
+        try {
+            doc.addImage(lastSubmittedData.signature, 'PNG', 14, yPos, 50, 25);
+        } catch (e) {
+            console.error("Could not add signature image to PDF", e);
+        }
+
+        // Save PDF
+        doc.save(`PUWER_Report_Project_${lastSubmittedData.project}.pdf`);
     }
 </script>
 </body>
