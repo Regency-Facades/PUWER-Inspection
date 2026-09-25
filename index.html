@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSE Audit - Access Portal</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+            background-color: #f4f4f9; 
+        }
+        .container { 
+            background: white; 
+            padding: 40px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+            width: 100%; 
+            max-width: 400px; 
+            text-align: center; 
+        }
+        h1 { color: #333; font-size: 24px; margin-bottom: 30px; }
+        .btn { 
+            display: block; 
+            width: 100%; 
+            padding: 15px; 
+            margin: 15px 0; 
+            border: none; 
+            border-radius: 5px; 
+            font-size: 16px; 
+            font-weight: bold;
+            cursor: pointer; 
+            transition: 0.3s; 
+        }
+        .btn-officer { background-color: #0056b3; color: white; }
+        .btn-manager { background-color: #28a745; color: white; }
+        .btn-back { background-color: #e0e0e0; color: #333; margin-top: 10px; }
+        .btn:hover { opacity: 0.9; }
+        
+        .input-section { display: none; margin-top: 20px; }
+        input[type="number"] { 
+            width: calc(100% - 24px); 
+            padding: 12px; 
+            margin-bottom: 15px; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            font-size: 18px; 
+            text-align: center; 
+        }
+        .error { color: #dc3545; font-size: 14px; display: none; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HSE Audit Portal</h1>
+
+        <!-- Initial Selection Screen -->
+        <div id="selection-screen">
+            <button class="btn btn-officer" onclick="showSection('officer-section')">Officer Dashboard</button>
+            <button class="btn btn-manager" onclick="showSection('manager-section')">Site Manager Dashboard</button>
+        </div>
+
+        <!-- Officer PIN Section -->
+        <div id="officer-section" class="input-section">
+            <h3>Enter Officer PIN</h3>
+            <p id="officer-error" class="error">Incorrect PIN. Access denied.</p>
+            <input type="number" id="officer-pin" placeholder="Enter 4-digit PIN" autocomplete="off">
+            <button class="btn btn-officer" onclick="verifyOfficer()">Access Dashboard</button>
+            <button class="btn btn-back" onclick="resetView()">Back</button>
+        </div>
+
+        <!-- Site Manager Project Number Section -->
+        <div id="manager-section" class="input-section">
+            <h3>Enter Project Number</h3>
+            <p id="manager-error" class="error">Please enter a valid 4-digit project number.</p>
+            <input type="number" id="project-number" placeholder="e.g. 1761" autocomplete="off">
+            <button class="btn btn-manager" onclick="verifyManager()">Start Inspection</button>
+            <button class="btn btn-back" onclick="resetView()">Back</button>
+        </div>
+    </div>
+
+    <script>
+        // Toggle visibility of the input sections
+        function showSection(sectionId) {
+            document.getElementById('selection-screen').style.display = 'none';
+            document.getElementById('officer-section').style.display = 'none';
+            document.getElementById('manager-section').style.display = 'none';
+            document.getElementById(sectionId).style.display = 'block';
+        }
+
+        // Return to the main button selection
+        function resetView() {
+            document.getElementById('selection-screen').style.display = 'block';
+            document.getElementById('officer-section').style.display = 'none';
+            document.getElementById('manager-section').style.display = 'none';
+            document.getElementById('officer-pin').value = '';
+            document.getElementById('project-number').value = '';
+            document.getElementById('officer-error').style.display = 'none';
+            document.getElementById('manager-error').style.display = 'none';
+        }
+
+        // Verify the 1945 PIN
+        function verifyOfficer() {
+            const pin = document.getElementById('officer-pin').value;
+            if (pin === '1945') {
+                // Redirect to the Officer Dashboard HTML file
+                window.location.href = 'officer_dashboard.html'; 
+            } else {
+                document.getElementById('officer-error').style.display = 'block';
+            }
+        }
+
+        // Verify the 4-digit Project Number
+        function verifyManager() {
+            const projectNum = document.getElementById('project-number').value;
+            
+            // Check if input is exactly 4 digits
+            if (projectNum.length === 4) {
+                // Save the project number to local storage for the inspection form to use
+                localStorage.setItem('currentProjectNumber', projectNum);
+                
+                // Redirect to the Mobile Inspection / Site Manager HTML file
+                window.location.href = 'site_manager_dashboard.html'; 
+            } else {
+                document.getElementById('manager-error').style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
