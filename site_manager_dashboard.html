@@ -314,7 +314,7 @@
         const savedProj = localStorage.getItem('currentProjectNumber');
         if(savedProj) {
             currentProject = savedProj;
-            document.getElementById('proj-header-sub').innerText = Project ${savedProj};
+            document.getElementById('proj-header-sub').innerText = Project {savedProj};
         }
         initSignaturePad();
     });
