@@ -180,7 +180,7 @@
         const savedProj = localStorage.getItem('currentProjectNumber');
         if(savedProj) {
             currentProject = savedProj;
-            document.getElementById('audit-title').innerText = `PUWER Audit - Project ${savedProj}`;
+            document.getElementById('audit-title').innerText = "PUWER Audit - Project " + savedProj;
         }
 
         try {
@@ -198,7 +198,9 @@
                     logoImg.style.display = 'block';
                 }
             }
-        } catch (e) { console.error("Branding load error", e); }
+        } catch (e) { 
+            console.error("Branding load error", e); 
+        }
         
         initSignaturePad();
     });
@@ -223,23 +225,19 @@
             btn.innerHTML = '🛑 <span>Stop Speaking</span>';
             userText.style.display = 'block';
             userText.innerText = "Listening to your response...";
-            
-            // Example of API text return
             aiText.innerText = "Please state the contractor name, tool type, and asset number.";
         } else {
             isListening = false;
             btn.classList.remove('listening');
             btn.innerHTML = '🎤 <span>Tap to Speak</span>';
             userText.innerText = "Transcribed: 'Makita drill from Smith Electricals, ID 994830.'";
-            
-            // Example of AI triggering a photo request
             triggerPhotoRequest("Tool Identification Plate");
         }
     }
 
     function triggerPhotoRequest(context) {
         document.getElementById('photo-request').style.display = 'block';
-        document.getElementById('photo-label').innerText = `📸 Please upload: ${context}`;
+        document.getElementById('photo-label').innerText = "📸 Please upload: " + context;
     }
 
     function nextTool() {
@@ -250,7 +248,7 @@
         
         const counter = document.getElementById('tool-counter');
         const currentCount = parseInt(counter.innerText.replace(/\D/g, '')) + 1;
-        counter.innerText = `Inspecting Tool #${currentCount}`;
+        counter.innerText = "Inspecting Tool #" + currentCount;
     }
 
     function finishInspection() {
@@ -283,13 +281,16 @@
         const rect = canvas.getBoundingClientRect();
         ctx.moveTo(e.offsetX || (e.touches[0].clientX - rect.left), e.offsetY || (e.touches[0].clientY - rect.top));
     }
+    
     function draw(e) {
         if (!isDrawing) return;
         const rect = canvas.getBoundingClientRect();
         ctx.lineTo(e.offsetX || (e.touches[0].clientX - rect.left), e.offsetY || (e.touches[0].clientY - rect.top));
         ctx.stroke();
     }
+    
     function stopDrawing() { isDrawing = false; }
+    
     function clearSignature() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
     function submitToSupabase() {
