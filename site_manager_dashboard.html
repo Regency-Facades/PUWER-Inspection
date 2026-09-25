@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PUWER Inspection App</title>
-    <!-- Load Supabase Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -37,8 +36,10 @@
         }
         .header-title { font-size: 16px; font-weight: bold; display: flex; align-items: center; gap: 10px; }
         .header-subtitle { font-size: 10px; font-weight: normal; opacity: 0.8; display: block; }
-        .stop-mic-btn {
-            background-color: var(--btn-fail);
+        
+        .header-buttons { display: flex; gap: 10px; }
+        .nav-btn {
+            background-color: rgba(255,255,255,0.2);
             color: white;
             border: none;
             padding: 8px 12px;
@@ -47,6 +48,7 @@
             font-size: 12px;
             cursor: pointer;
         }
+        .stop-mic-btn { background-color: var(--btn-fail); }
 
         .container {
             max-width: 600px;
@@ -79,19 +81,13 @@
             margin-top: 15px;
             cursor: pointer;
         }
+        
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 12px; font-weight: bold; color: #555; margin-bottom: 5px; }
+        .input-group input { width: 100%; padding: 10px; border: 1px solid var(--box-border); border-radius: 4px; box-sizing: border-box; }
 
-        .inspector-details {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .input-box {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid var(--box-border);
-            border-radius: 4px;
-            font-size: 14px;
-        }
+        .inspector-details { display: flex; gap: 10px; margin-bottom: 20px; }
+        .input-box { flex: 1; padding: 10px; border: 1px solid var(--box-border); border-radius: 4px; font-size: 14px; }
 
         .inspection-card {
             background: white;
@@ -124,14 +120,11 @@
             background-color: var(--btn-fail);
             border-color: #f5c2c7;
         }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
 
         .module-title { font-size: 12px; font-weight: bold; color: var(--app-dark); text-transform: uppercase; margin-bottom: 5px; }
-        .question-text { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 20px; min-height: 50px; }
+        .question-text { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px; }
+        .question-explanation { font-size: 13px; color: #666; margin-bottom: 20px; font-style: italic; background: #f8f9fa; padding: 10px; border-radius: 6px; border-left: 3px solid var(--app-dark); text-align: left;}
 
         .response-box {
             background: #f8f9fa;
@@ -142,32 +135,32 @@
             margin-bottom: 20px;
         }
         .response-label { font-size: 10px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 10px; display: block; }
-        .response-text { font-style: italic; color: #555; min-height: 40px; }
         
-        .action-row { display: flex; gap: 10px; }
-        .action-btn {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 4px;
-            color: white;
-            font-weight: bold;
-            font-size: 14px;
-            cursor: pointer;
-            opacity: 0.5;
-            transition: 0.2s;
+        /* Updated to a real textarea so the manager can type */
+        .response-text { 
+            width: 100%; 
+            min-height: 80px; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            padding: 10px; 
+            font-size: 14px; 
+            font-style: normal; 
+            color: #333; 
+            box-sizing: border-box; 
+            resize: vertical;
         }
-        .action-btn.active { opacity: 1; border: 2px solid #000; }
+        
+        .action-row { display: flex; gap: 10px; margin-top: 15px; }
+        .action-btn {
+            flex: 1; padding: 12px; border: none; border-radius: 4px; color: white; font-weight: bold; font-size: 14px; cursor: pointer; opacity: 0.5; transition: 0.2s;
+        }
+        .action-btn.active { opacity: 1; border: 2px solid #000; box-shadow: 0 0 8px rgba(0,0,0,0.3); }
         .btn-pass { background-color: var(--btn-pass); }
         .btn-fail { background-color: var(--btn-fail); }
         .btn-na { background-color: var(--btn-na); }
 
         .photo-box {
-            background: #eef2f5;
-            border: 1px solid #cce5ff;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
+            background: #eef2f5; border: 1px solid #cce5ff; border-radius: 8px; padding: 15px; margin-bottom: 20px;
         }
         .photo-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .photo-title { font-weight: bold; font-size: 14px; color: #333; }
@@ -178,14 +171,7 @@
         input[type="file"] { display: none; }
 
         #signature-pad {
-            border: 2px solid var(--box-border);
-            border-radius: 4px;
-            width: 100%;
-            height: 200px;
-            cursor: crosshair;
-            touch-action: none; 
-            background: white;
-            margin-bottom: 15px;
+            border: 2px solid #999; border-radius: 4px; width: 100%; height: 200px; cursor: crosshair; touch-action: none; background: #fff; margin-bottom: 15px;
         }
     </style>
 </head>
@@ -195,10 +181,32 @@
     <div class="header-title">
         🔧 <div>PUWER INSPECTION APP <span class="header-subtitle" id="proj-header-sub">Interactive Equipment Compliance</span></div>
     </div>
-    <button class="stop-mic-btn" onclick="toggleMic()">⏵ STOP MIC</button>
+    <div class="header-buttons">
+        <button class="nav-btn" onclick="showSection('settings-section')">⚙️ DB Sync</button>
+        <button class="nav-btn stop-mic-btn" onclick="toggleMic()">⏵ STOP MIC</button>
+    </div>
 </div>
 
 <div class="container">
+    
+    <!-- Database Settings Panel (Fix for cross-device testing) -->
+    <div id="settings-section" class="section">
+        <div class="briefing-card">
+            <h3 style="color: var(--app-dark); margin-top: 0;">Database Sync Settings</h3>
+            <p style="font-size: 13px; color: #555;">Since you are on a mobile device, please paste your Supabase keys here once to link this device to the database.</p>
+            <div class="input-group">
+                <label>Supabase Project URL</label>
+                <input type="text" id="mobile-supa-url" placeholder="https://xxxxxx.supabase.co">
+            </div>
+            <div class="input-group">
+                <label>Supabase Anon Key</label>
+                <input type="text" id="mobile-supa-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+            </div>
+            <button class="start-btn" onclick="saveMobileDbSettings()">Save Connection</button>
+            <button class="start-btn" style="background-color: #6c757d; margin-top: 10px;" onclick="showSection('briefing-section')">Cancel</button>
+        </div>
+    </div>
+
     <div id="briefing-section" class="section active">
         <div class="briefing-card">
             <h3 style="color: var(--app-dark); margin-top: 0;">PUWER Audit Briefing</h3>
@@ -222,16 +230,16 @@
                 </button>
             </div>
             
-            <div id="module-title" class="module-title">MODULE 1 - PROJECT & SITE CONTEXT</div>
-            <div id="question-text" class="question-text">
-                Question 1: What is the tool or equipment name and serial or ID number?
-            </div>
+            <div id="module-title" class="module-title">MODULE 1</div>
+            <div id="question-text" class="question-text">Question Placeholder</div>
+            <div id="question-explanation" class="question-explanation">Explanation Placeholder</div>
 
             <div class="response-box">
-                <span class="response-label">Inspector Response</span>
-                <div id="live-transcript" class="response-text">Tap the microphone to record your answer...</div>
+                <span class="response-label">Inspector Response (Speak or Type)</span>
+                <!-- Replaced div with textarea to allow typing -->
+                <textarea id="live-transcript" class="response-text" placeholder="Tap the mic to dictate, or type your answer here..."></textarea>
                 
-                <div class="action-row" style="margin-top: 15px;">
+                <div class="action-row">
                     <button class="action-btn btn-pass" id="btn-pass" onclick="selectStatus('pass')">Pass (Yes)</button>
                     <button class="action-btn btn-fail" id="btn-fail" onclick="selectStatus('fail')">Fail (No)</button>
                     <button class="action-btn btn-na" id="btn-na" onclick="selectStatus('na')">N/A</button>
@@ -259,9 +267,11 @@
         <div class="briefing-card">
             <h3 style="color: var(--app-dark); margin-top: 0;">Sign Off Inspection</h3>
             <p style="font-size: 14px; color: #555;">By signing below, I confirm that the details provided are accurate.</p>
+            
             <canvas id="signature-pad"></canvas>
+            
             <div style="display: flex; gap: 10px;">
-                <button class="skip-btn" style="flex: 1; margin: 0;" onclick="clearSignature()">Clear</button>
+                <button class="start-btn" style="flex: 1; margin: 0; background-color: #6c757d;" onclick="clearSignature()">Clear</button>
                 <button class="start-btn" id="submit-db-btn" style="flex: 2; margin: 0;" onclick="submitToSupabase()">Sign & Submit Data</button>
             </div>
         </div>
@@ -279,19 +289,68 @@
 <script>
     let supabaseClient = null;
     let currentProject = '';
-    let isListening = false;
-    let currentQuestionIndex = 0;
     
+    // --- Real Web Speech API Setup ---
+    let isListening = false;
+    let recognition = null;
+    if ('webkitSpeechRecognition' in window) {
+        recognition = new webkitSpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        
+        recognition.onresult = function(event) {
+            let finalTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                finalTranscript += event.results[i][0].transcript;
+            }
+            // Update the text box in real-time
+            document.getElementById('live-transcript').value = finalTranscript;
+        };
+        
+        recognition.onerror = function(event) {
+            console.error("Speech Recognition Error: ", event.error);
+            isListening = false;
+            document.getElementById('main-mic-btn').classList.remove('pulsing');
+            document.getElementById('mic-label').innerText = "Speak";
+        };
+    }
+
+    let currentQuestionIndex = 0;
     let inspectionData = [];
     let currentToolData = {};
 
+    // --- The 6 PUWER Questions with Explanations ---
     const questions = [
-        { mod: "MODULE 1 - IDENTIFICATION", text: "Question 1: What is the tool or equipment name and serial or ID number?" },
-        { mod: "MODULE 2 - ELECTRICAL", text: "Question 2: Are cables, plugs, and battery housings intact with no exposed wires?" },
-        { mod: "MODULE 3 - INTEGRITY", text: "Question 3: Is the tool casing free from significant cracks, breaks, or structural damage?" },
-        { mod: "MODULE 4 - GUARDS", text: "Question 4: Are all manufacturer safety guards present, secure, and functioning?" },
-        { mod: "MODULE 5 - CONTROLS", text: "Question 5: Do all switches and emergency cut-offs operate cleanly without sticking?" },
-        { mod: "MODULE 6 - SUITABILITY", text: "Question 6: Is the tool fit for its intended purpose on this specific site?" }
+        { 
+            mod: "MODULE 1 - PROJECT & SITE CONTEXT", 
+            text: "Question 1: What is the tool or equipment name and serial or ID number?",
+            explanation: "Identify the specific tool being inspected. Include the make, model, and any asset tags or serial numbers for precise tracing."
+        },
+        { 
+            mod: "MODULE 2 - ELECTRICAL & POWER SAFETY", 
+            text: "Question 2: Are cables, plugs, and battery housings intact with no exposed wires?",
+            explanation: "Check the entire length of the power cord, the plug casing, and battery slots. Any cuts, taped repairs, or exposed copper means an automatic fail."
+        },
+        { 
+            mod: "MODULE 3 - PHYSICAL INTEGRITY", 
+            text: "Question 3: Is the tool casing free from significant cracks, breaks, or structural damage?",
+            explanation: "Look for drop damage, shattered plastic, or bent metal that could compromise the tool's structural safety or expose internal moving parts."
+        },
+        { 
+            mod: "MODULE 4 - GUARDS & MECHANICAL", 
+            text: "Question 4: Are all manufacturer safety guards present, secure, and functioning?",
+            explanation: "Ensure blade guards, shields, and safety locks are attached, move freely as intended, and have not been bypassed or removed by the operator."
+        },
+        { 
+            mod: "MODULE 5 - EMERGENCY CONTROLS", 
+            text: "Question 5: Do all switches and emergency cut-offs operate cleanly without sticking?",
+            explanation: "Test the trigger and the 'off' switch. The tool must immediately stop when the switch is released. Sticky triggers are highly dangerous."
+        },
+        { 
+            mod: "MODULE 6 - GENERAL SUITABILITY", 
+            text: "Question 6: Is the tool fit for its intended purpose on this specific site?",
+            explanation: "Assess if this is the correct tool for the job being performed. Using an underpowered or incorrect tool for a heavy-duty task is a safety violation."
+        }
     ];
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -302,12 +361,15 @@
             document.getElementById('proj-header-sub').innerText = 'Project ' + savedProj;
         }
         
-        // Auto-connect to Supabase based on Officer Dashboard settings
+        // Auto-connect to Supabase
         try {
             const savedDb = localStorage.getItem('supabaseConfig');
             if(savedDb) {
                 const config = JSON.parse(savedDb);
                 supabaseClient = window.supabase.createClient(config.url, config.key);
+                // Also populate the settings fields
+                document.getElementById('mobile-supa-url').value = config.url;
+                document.getElementById('mobile-supa-key').value = config.key;
             }
         } catch (e) {
             console.error("Database connection error", e);
@@ -315,6 +377,19 @@
 
         initSignaturePad();
     });
+
+    function saveMobileDbSettings() {
+        const url = document.getElementById('mobile-supa-url').value.trim();
+        const key = document.getElementById('mobile-supa-key').value.trim();
+        if(url && key) {
+            localStorage.setItem('supabaseConfig', JSON.stringify({ url: url, key: key }));
+            supabaseClient = window.supabase.createClient(url, key);
+            alert("Database Synced! You can now submit reports from this device.");
+            showSection('briefing-section');
+        } else {
+            alert("Please provide both URL and Key.");
+        }
+    }
 
     function showSection(id) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -330,7 +405,9 @@
         currentQuestionIndex = index;
         document.getElementById('module-title').innerText = questions[index].mod;
         document.getElementById('question-text').innerText = questions[index].text;
-        document.getElementById('live-transcript').innerText = "Tap the microphone to record your answer...";
+        document.getElementById('question-explanation').innerText = questions[index].explanation;
+        document.getElementById('live-transcript').value = ""; // Clear text box
+        
         resetButtons();
         document.getElementById('file-upload').value = '';
         document.getElementById('file-name').innerText = "no file selected";
@@ -340,27 +417,28 @@
     function toggleMic() {
         const btn = document.getElementById('main-mic-btn');
         const label = document.getElementById('mic-label');
-        const transcript = document.getElementById('live-transcript');
         
+        if (!recognition) {
+            alert("Speech recognition is not supported in this browser. Please type your response.");
+            return;
+        }
+
         if (!isListening) {
             isListening = true;
             btn.classList.add('pulsing');
             label.innerText = "Listening";
-            transcript.innerText = "Listening to your response...";
-            transcript.style.fontStyle = "italic";
+            recognition.start();
         } else {
             isListening = false;
             btn.classList.remove('pulsing');
             label.innerText = "Speak";
-            transcript.innerText = "Recorded response captured.";
-            transcript.style.fontStyle = "normal";
+            recognition.stop();
         }
     }
 
     function selectStatus(status) {
         resetButtons();
         document.getElementById('btn-' + status).classList.add('active');
-        document.getElementById('btn-' + status).style.opacity = '1';
         currentToolData.status = status;
     }
 
@@ -368,7 +446,6 @@
         ['pass', 'fail', 'na'].forEach(s => {
             const btn = document.getElementById('btn-' + s);
             btn.classList.remove('active');
-            btn.style.opacity = '0.5';
         });
     }
 
@@ -383,11 +460,12 @@
     }
 
     function nextQuestion() {
+        // Save the typed/spoken answer and the pass/fail button
         inspectionData.push({
             step: questions[currentQuestionIndex].mod,
             question: questions[currentQuestionIndex].text,
             status: currentToolData.status || "Not Selected",
-            transcript: document.getElementById('live-transcript').innerText
+            transcript: document.getElementById('live-transcript').value
         });
 
         if(currentQuestionIndex < questions.length - 1) {
@@ -404,41 +482,73 @@
 
     function finishInspection() {
         showSection('signature-section');
+        // Delay to allow canvas to render before calculating its size
+        setTimeout(initSignaturePad, 200); 
     }
 
+    // --- Fixed iOS Touch Signature Pad Logic ---
     let canvas, ctx, isDrawing = false;
+    
     function initSignaturePad() {
         canvas = document.getElementById('signature-pad');
         ctx = canvas.getContext('2d');
-        setTimeout(() => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; }, 100);
-        canvas.addEventListener('mousedown', startDrawing); canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', stopDrawing); canvas.addEventListener('mouseout', stopDrawing);
-        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e.touches[0]); }, {passive: false});
-        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e.touches[0]); }, {passive: false});
-        canvas.addEventListener('touchend', stopDrawing);
+        
+        // Match internal canvas resolution to CSS size
+        canvas.width = canvas.offsetWidth; 
+        canvas.height = canvas.offsetHeight;
+        
+        // Touch events specific for mobile Safari
+        canvas.addEventListener('touchstart', handleStart, {passive: false});
+        canvas.addEventListener('touchmove', handleMove, {passive: false});
+        canvas.addEventListener('touchend', handleEnd, {passive: false});
+        
+        // Standard mouse events
+        canvas.addEventListener('mousedown', handleStart);
+        canvas.addEventListener('mousemove', handleMove);
+        canvas.addEventListener('mouseup', handleEnd);
+        canvas.addEventListener('mouseout', handleEnd);
     }
     
-    function startDrawing(e) { 
-        isDrawing = true; 
-        ctx.beginPath(); 
-        const rect = canvas.getBoundingClientRect(); 
-        ctx.moveTo(e.offsetX || (e.touches[0].clientX - rect.left), e.offsetY || (e.touches[0].clientY - rect.top)); 
+    function getPointerPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        // Check if it's a touch event or mouse event
+        let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+            x: clientX - rect.left,
+            y: clientY - rect.top
+        };
     }
-    
-    function draw(e) { 
-        if (!isDrawing) return; 
-        const rect = canvas.getBoundingClientRect(); 
-        ctx.lineTo(e.offsetX || (e.touches[0].clientX - rect.left), e.offsetY || (e.touches[0].clientY - rect.top)); 
-        ctx.stroke(); 
-    }
-    
-    function stopDrawing() { isDrawing = false; }
-    
-    function clearSignature() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
+    function handleStart(e) {
+        e.preventDefault(); // Stop scrolling on mobile
+        isDrawing = true;
+        const pos = getPointerPos(e);
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+    }
+
+    function handleMove(e) {
+        e.preventDefault(); // Stop scrolling on mobile
+        if (!isDrawing) return;
+        const pos = getPointerPos(e);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+    }
+
+    function handleEnd(e) {
+        e.preventDefault();
+        isDrawing = false;
+    }
+    
+    function clearSignature() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // --- Final Submission ---
     async function submitToSupabase() {
         if (!supabaseClient) {
-            alert("Database not connected! Please sync Supabase in the Officer Dashboard first.");
+            alert("Database not connected! Please click the 'DB Sync' button in the top right to link your database.");
             return;
         }
 
