@@ -277,11 +277,7 @@
 </div>
 
 <script>
-    // Supabase variables initialized globally using let to avoid redeclaration syntax errors
-    let supabaseUrl = 'YOUR_SUPABASE_URL';
-    let supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
-    let supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-
+    let supabaseClient = null;
     let currentProject = '';
     let isListening = false;
     let currentQuestionIndex = 0;
@@ -299,11 +295,24 @@
     ];
 
     document.addEventListener('DOMContentLoaded', () => {
+        // Load Project Number
         const savedProj = localStorage.getItem('currentProjectNumber');
         if(savedProj) {
             currentProject = savedProj;
             document.getElementById('proj-header-sub').innerText = 'Project ' + savedProj;
         }
+        
+        // Auto-connect to Supabase based on Officer Dashboard settings
+        try {
+            const savedDb = localStorage.getItem('supabaseConfig');
+            if(savedDb) {
+                const config = JSON.parse(savedDb);
+                supabaseClient = window.supabase.createClient(config.url, config.key);
+            }
+        } catch (e) {
+            console.error("Database connection error", e);
+        }
+
         initSignaturePad();
     });
 
@@ -428,6 +437,11 @@
     function clearSignature() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
     async function submitToSupabase() {
+        if (!supabaseClient) {
+            alert("Database not connected! Please sync Supabase in the Officer Dashboard first.");
+            return;
+        }
+
         const submitBtn = document.getElementById('submit-db-btn');
         submitBtn.innerText = "Submitting...";
         submitBtn.disabled = true;
@@ -454,7 +468,7 @@
             
         } catch (error) {
             console.error("Error submitting to Supabase:", error);
-            alert("Failed to save report to database. Please check connection.");
+            alert("Failed to save report to database. Please check your connection.");
             submitBtn.innerText = "Sign & Submit Data";
             submitBtn.disabled = false;
         }
