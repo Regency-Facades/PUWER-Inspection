@@ -67,6 +67,7 @@
         .btn:disabled { background-color: #ccc; cursor: not-allowed; }
         .btn-danger { background-color: var(--danger-color); }
         .btn-success { background-color: var(--success-color); }
+        .btn-warning { background-color: #ffc107; color: #333; }
         
         .yn-group { display: flex; gap: 10px; margin-bottom: 15px; }
         .yn-btn {
@@ -94,7 +95,7 @@
         }
         
         .voice-indicator {
-            display: flex;
+            display: none;
             align-items: center;
             gap: 10px;
             padding: 15px;
@@ -123,29 +124,24 @@
         <div id="brand-slogan" class="slogan"></div>
     </div>
 
-    <!-- 1. Project Verification Section -->
-    <div id="project-section" class="section active">
-        <h3>Site Manager Access</h3>
-        <div class="form-group">
-            <label>Confirm 4-Digit Project Number</label>
-            <input type="number" id="project-input" placeholder="e.g. 1761">
+    <!-- 1. PUWER Audio Briefing Section (Bypasses double-entry) -->
+    <div id="briefing-section" class="section active">
+        <h3 id="audit-title">PUWER Audit</h3>
+        
+        <button id="play-audio-btn" class="btn btn-warning" onclick="playBriefing()">▶️ Play Safety Briefing</button>
+        
+        <div id="audio-status-container" class="voice-indicator">
+            <span id="audio-status">🔊 Playing official safety briefing...</span>
         </div>
-        <button class="btn" onclick="verifyProject()">Continue to Briefing</button>
-    </div>
 
-    <!-- 2. PUWER Audio Briefing Section -->
-    <div id="briefing-section" class="section">
-        <h3>Mandatory PUWER Briefing</h3>
-        <div class="voice-indicator">
-            <span id="audio-status">🔊 Loading official safety briefing...</span>
-        </div>
-        <p id="briefing-text" style="line-height: 1.6; color: #555;">
+        <p id="briefing-text" style="line-height: 1.6; color: #555; margin-top: 20px;">
             "Welcome to the safety inspection module. Under the Provision and Use of Work Equipment Regulations, it is your legal responsibility to ensure all tools operated on this site are safe. Any equipment deemed unsafe must be immediately withdrawn from use and documented. Your diligence protects lives."
         </p>
+
         <button class="btn btn-success" id="start-inspection-btn" disabled onclick="startInspection()">Start PUWER Inspection</button>
     </div>
 
-    <!-- 3. Dynamic Inspection Form Section -->
+    <!-- 2. Dynamic Inspection Form Section -->
     <div id="inspection-section" class="section">
         <h3 id="tool-counter">Inspecting Tool #1</h3>
         <div id="question-container">
@@ -164,7 +160,7 @@
         </div>
     </div>
 
-    <!-- 4. Signature Section -->
+    <!-- 3. Signature Section -->
     <div id="signature-section" class="section">
         <h3>Sign Off Inspection</h3>
         <p>By signing below, I confirm that I have carried out this PUWER inspection accurately.</p>
@@ -173,11 +169,11 @@
         <button class="btn btn-success" onclick="submitToSupabase()">Sign & Submit to Database</button>
     </div>
 
-    <!-- 5. Success Section -->
+    <!-- 4. Success Section -->
     <div id="success-section" class="section">
         <h3 style="color: var(--success-color);">Inspection Submitted!</h3>
         <p>The report has been saved. You may close this window.</p>
-        <button class="btn" onclick="location.reload()">Return to Start</button>
+        <button class="btn" onclick="location.href='index.html'">Return to Portal</button>
     </div>
 </div>
 
@@ -197,8 +193,14 @@
     ];
 
     document.addEventListener('DOMContentLoaded', () => {
+        // Automatically grab the project number passed from the green button screen
         const savedProj = localStorage.getItem('currentProjectNumber');
-        if(savedProj) document.getElementById('project-input').value = savedProj;
+        if(savedProj) {
+            currentProject = savedProj;
+            document.getElementById('audit-title').innerText = PUWER Audit - Project ${savedProj};
+        } else {
+            document.getElementById('audit-title').innerText = PUWER Audit;
+        }
 
         const branding = JSON.parse(localStorage.getItem('hseBranding'));
         if(branding) {
@@ -225,37 +227,34 @@
         document.getElementById(id).classList.add('active');
     }
 
-    function verifyProject() {
-        const proj = document.getElementById('project-input').value;
-        if (proj.length === 4) {
-            currentProject = proj;
-            showSection('briefing-section');
-            playBriefing();
-        } else {
-            alert("Please enter a valid 4-digit project number.");
-        }
-    }
-
     function playBriefing() {
-        // FAILSAFE: Unlocks the button after 2 seconds regardless of iOS audio blocking
+        // Swap button for status indicator
+        document.getElementById('play-audio-btn').style.display = 'none';
+        document.getElementById('audio-status-container').style.display = 'flex';
+
+        // UNBREAKABLE FAILSAFE: Unlocks the button after 3 seconds regardless of iOS audio blocking
         setTimeout(() => {
             document.getElementById('start-inspection-btn').disabled = false;
             document.getElementById('audio-status').innerText = "✅ Briefing ready. You may proceed.";
-        }, 2000);
+        }, 3000);
 
-        if ('speechSynthesis' in window) {
-            const text = document.getElementById('briefing-text').innerText;
-            const speech = new SpeechSynthesisUtterance(text);
-            const voices = window.speechSynthesis.getVoices();
-            const ukFemale = voices.find(v => v.lang === 'en-GB' && v.name.toLowerCase().includes('female'));
-            if(ukFemale) speech.voice = ukFemale;
-            speech.rate = 0.95; 
-            
-            speech.onend = () => {
-                document.getElementById('start-inspection-btn').disabled = false;
-                document.getElementById('audio-status').innerText = "✅ Briefing complete. You may proceed.";
-            };
-            window.speechSynthesis.speak(speech);
+        try {
+            if ('speechSynthesis' in window) {
+                const text = document.getElementById('briefing-text').innerText;
+                const speech = new SpeechSynthesisUtterance(text);
+                const voices = window.speechSynthesis.getVoices();
+                const ukFemale = voices.find(v => v.lang === 'en-GB' && v.name.toLowerCase().includes('female'));
+                if(ukFemale) speech.voice = ukFemale;
+                speech.rate = 0.95; 
+                
+                speech.onend = () => {
+                    document.getElementById('start-inspection-btn').disabled = false;
+                    document.getElementById('audio-status').innerText = "✅ Briefing complete. You may proceed.";
+                };
+                window.speechSynthesis.speak(speech);
+            }
+        } catch(e) {
+            console.log("Audio API not supported or blocked.");
         }
     }
 
@@ -278,7 +277,7 @@
                         <button type="button" class="yn-btn" id="na-btn-${qId}" onclick="handleYN(${qId}, 'na')">N/A</button>
                     </div>
                     <div id="fail-notes-${qId}" class="fail-notes">
-                        <label style="color: var(--danger-color);">⚠️ Action Required: Note Defect & Advice Provided</label>
+                        <label style="color: var(--danger-color);">⚠️ Action Required: Note Defect</label>
                         <textarea id="notes-text-${qId}" rows="2" placeholder="Detail the fault..."></textarea>
                     </div>
                 </div>
