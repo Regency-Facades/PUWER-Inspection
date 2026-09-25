@@ -137,7 +137,6 @@
         }
         .response-label { font-size: 10px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 10px; display: block; }
         
-        /* Textarea allows both dictation and manual typing */
         .response-text { 
             width: 100%; 
             min-height: 80px; 
@@ -151,6 +150,8 @@
             resize: vertical;
         }
         
+        .ai-status-text { font-size: 12px; font-weight: bold; color: #0056b3; margin-top: 10px; text-align: center; min-height: 15px; }
+
         .action-row { display: flex; gap: 10px; margin-top: 15px; }
         .action-btn {
             flex: 1; padding: 12px; border: none; border-radius: 4px; color: white; font-weight: bold; font-size: 14px; cursor: pointer; opacity: 0.5; transition: 0.2s;
@@ -190,7 +191,6 @@
 
 <div class="container">
     
-    <!-- Database Settings Panel -->
     <div id="settings-section" class="section">
         <div class="briefing-card">
             <h3 style="color: var(--app-dark); margin-top: 0;">Database Sync Settings</h3>
@@ -201,14 +201,13 @@
             </div>
             <div class="input-group">
                 <label>Supabase Anon Key</label>
-                <input type="text" id="mobile-supa-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                <input type="password" id="mobile-supa-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
             </div>
             <button class="start-btn" onclick="saveMobileDbSettings()">Save Connection</button>
             <button class="start-btn" style="background-color: #6c757d; margin-top: 10px;" onclick="showSection('briefing-section')">Cancel</button>
         </div>
     </div>
 
-    <!-- Briefing Section -->
     <div id="briefing-section" class="section active">
         <div class="briefing-card">
             <h3 style="color: var(--app-dark); margin-top: 0;">PUWER Audit Briefing</h3>
@@ -219,7 +218,6 @@
         </div>
     </div>
 
-    <!-- Main Inspection Section -->
     <div id="inspection-section" class="section">
         <div class="inspector-details">
             <input type="text" class="input-box" placeholder="Inspector Name" id="inspector-name">
@@ -239,10 +237,11 @@
 
             <div class="response-box">
                 <span class="response-label">Inspector Response (Speak or Type)</span>
-                <!-- Textarea allows typing or dictation updates -->
                 <textarea id="live-transcript" class="response-text" placeholder="Tap the mic to dictate, or type your answer here..."></textarea>
                 
-                <div class="action-row">
+                <div id="ai-status" class="ai-status-text"></div>
+                
+                <div class="action-row" id="action-row">
                     <button class="action-btn btn-pass" id="btn-pass" onclick="selectStatus('pass')">Pass (Yes)</button>
                     <button class="action-btn btn-fail" id="btn-fail" onclick="selectStatus('fail')">Fail (No)</button>
                     <button class="action-btn btn-na" id="btn-na" onclick="selectStatus('na')">N/A</button>
@@ -266,14 +265,11 @@
         <button class="start-btn" onclick="finishInspection()" style="margin-top: 0;">☑ Submit Inspection Report</button>
     </div>
 
-    <!-- Signature Section -->
     <div id="signature-section" class="section">
         <div class="briefing-card">
             <h3 style="color: var(--app-dark); margin-top: 0;">Sign Off Inspection</h3>
             <p style="font-size: 14px; color: #555;">By signing below, I confirm that the details provided are accurate.</p>
-            
             <canvas id="signature-pad"></canvas>
-            
             <div style="display: flex; gap: 10px;">
                 <button class="start-btn" style="flex: 1; margin: 0; background-color: #6c757d;" onclick="clearSignature()">Clear</button>
                 <button class="start-btn" id="submit-db-btn" style="flex: 2; margin: 0;" onclick="submitToSupabase()">Sign & Submit Data</button>
@@ -281,7 +277,6 @@
         </div>
     </div>
 
-    <!-- Success Section -->
     <div id="success-section" class="section">
         <div class="briefing-card" style="text-align: center;">
             <h3 style="color: var(--btn-pass); margin-top: 0;">Inspection Submitted!</h3>
@@ -295,7 +290,7 @@
     let supabaseClient = null;
     let currentProject = '';
     
-    // --- Speech Recognition (Listening) ---
+    // --- Web Speech API ---
     let isListening = false;
     let recognition = null;
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -320,31 +315,23 @@
         };
     }
 
-    // --- Speech Synthesis (Speaking in Female Voice) ---
+    // --- Speech Synthesis (Female Voice) ---
     function speakPrompt(textToSpeak) {
         if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel(); // Stop any previous playback
-            
+            window.speechSynthesis.cancel(); 
             const utterance = new SpeechSynthesisUtterance(textToSpeak);
             const voices = window.speechSynthesis.getVoices();
-            
-            // Prioritize UK female voices (iOS / Chrome / Android)
             const femaleVoice = voices.find(v => 
                 (v.lang === 'en-GB' || v.lang.startsWith('en')) && 
                 (v.name.toLowerCase().includes('female') || 
-                 v.name.toLowerCase().includes('hazel') || 
                  v.name.toLowerCase().includes('samantha') || 
                  v.name.toLowerCase().includes('victoria') ||
                  v.name.toLowerCase().includes('zira'))
             ) || voices.find(v => v.lang.startsWith('en'));
 
-            if (femaleVoice) {
-                utterance.voice = femaleVoice;
-            }
-            
-            utterance.rate = 0.95; // Clear, deliberate cadence
+            if (femaleVoice) utterance.voice = femaleVoice;
+            utterance.rate = 0.95; 
             utterance.pitch = 1.0;
-            
             window.speechSynthesis.speak(utterance);
         }
     }
@@ -353,49 +340,22 @@
     let inspectionData = [];
     let currentToolData = {};
 
-    // --- The 6 PUWER Questions with Explanations ---
     const questions = [
-        { 
-            mod: "MODULE 1 - PROJECT & SITE CONTEXT", 
-            text: "Question 1: What is the tool or equipment name and serial or ID number?",
-            explanation: "Identify the specific tool being inspected. Include the make, model, and any asset tags or serial numbers for precise tracing."
-        },
-        { 
-            mod: "MODULE 2 - ELECTRICAL & POWER SAFETY", 
-            text: "Question 2: Are cables, plugs, and battery housings intact with no exposed wires?",
-            explanation: "Check the entire length of the power cord, plug casing, and battery slots. Any cuts, taped repairs, or exposed copper means an automatic fail."
-        },
-        { 
-            mod: "MODULE 3 - PHYSICAL INTEGRITY", 
-            text: "Question 3: Is the tool casing free from significant cracks, breaks, or structural damage?",
-            explanation: "Look for drop damage, shattered plastic, or bent metal that could compromise structural safety or expose internal moving parts."
-        },
-        { 
-            mod: "MODULE 4 - GUARDS & MECHANICAL", 
-            text: "Question 4: Are all manufacturer safety guards present, secure, and functioning?",
-            explanation: "Ensure blade guards, shields, and safety locks are attached, move freely as intended, and have not been bypassed or removed."
-        },
-        { 
-            mod: "MODULE 5 - EMERGENCY CONTROLS", 
-            text: "Question 5: Do all switches and emergency cut-offs operate cleanly without sticking?",
-            explanation: "Test the trigger and off switch. The tool must immediately stop when released. Sticky triggers are highly dangerous."
-        },
-        { 
-            mod: "MODULE 6 - GENERAL SUITABILITY", 
-            text: "Question 6: Is the tool fit for its intended purpose on this specific site?",
-            explanation: "Assess if this is the correct tool for the job being performed. Using an incorrect or underpowered tool for heavy work is a safety violation."
-        }
+        { mod: "MODULE 1 - PROJECT & SITE CONTEXT", text: "Question 1: What is the tool or equipment name and serial or ID number?", explanation: "Identify the specific tool being inspected. Include the make, model, and any asset tags or serial numbers for precise tracing." },
+        { mod: "MODULE 2 - ELECTRICAL & POWER SAFETY", text: "Question 2: Are cables, plugs, and battery housings intact with no exposed wires?", explanation: "Check the entire length of the power cord, plug casing, and battery slots. Any cuts, taped repairs, or exposed copper means an automatic fail." },
+        { mod: "MODULE 3 - PHYSICAL INTEGRITY", text: "Question 3: Is the tool casing free from significant cracks, breaks, or structural damage?", explanation: "Look for drop damage, shattered plastic, or bent metal that could compromise structural safety or expose internal moving parts." },
+        { mod: "MODULE 4 - GUARDS & MECHANICAL", text: "Question 4: Are all manufacturer safety guards present, secure, and functioning?", explanation: "Ensure blade guards, shields, and safety locks are attached, move freely as intended, and have not been bypassed or removed." },
+        { mod: "MODULE 5 - EMERGENCY CONTROLS", text: "Question 5: Do all switches and emergency cut-offs operate cleanly without sticking?", explanation: "Test the trigger and off switch. The tool must immediately stop when released. Sticky triggers are highly dangerous." },
+        { mod: "MODULE 6 - GENERAL SUITABILITY", text: "Question 6: Is the tool fit for its intended purpose on this specific site?", explanation: "Assess if this is the correct tool for the job being performed. Using an incorrect or underpowered tool for heavy work is a safety violation." }
     ];
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Load Project Number
         const savedProj = localStorage.getItem('currentProjectNumber');
         if(savedProj) {
             currentProject = savedProj;
             document.getElementById('proj-header-sub').innerText = 'Project ' + savedProj;
         }
         
-        // Auto-connect to Supabase
         try {
             const savedDb = localStorage.getItem('supabaseConfig');
             if(savedDb) {
@@ -408,7 +368,6 @@
             console.error("Database connection error", e);
         }
 
-        // Pre-load synthesis voices for mobile browsers
         if ('speechSynthesis' in window) {
             window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
         }
@@ -447,13 +406,20 @@
         document.getElementById('question-text').innerText = q.text;
         document.getElementById('question-explanation').innerText = q.explanation;
         document.getElementById('live-transcript').value = "";
+        document.getElementById('ai-status').innerText = "";
         
         resetButtons();
         document.getElementById('file-upload').value = '';
         document.getElementById('file-name').innerText = "no file selected";
         currentToolData.status = null; 
 
-        // Automatically speak the question and its explanation
+        // Hide action buttons on Step 1 (Tool ID)
+        if (index === 0) {
+            document.getElementById('action-row').style.display = 'none';
+        } else {
+            document.getElementById('action-row').style.display = 'flex';
+        }
+
         speakPrompt(q.text + " " + q.explanation);
     }
 
@@ -467,7 +433,7 @@
         }
 
         if (!isListening) {
-            window.speechSynthesis.cancel(); // Stop AI speaking when user starts dictating
+            window.speechSynthesis.cancel();
             isListening = true;
             btn.classList.add('pulsing');
             label.innerText = "Listening";
@@ -477,19 +443,57 @@
             btn.classList.remove('pulsing');
             label.innerText = "Speak";
             recognition.stop();
+            // Automatically process text with AI when mic is stopped
+            processWithAI();
+        }
+    }
+
+    // --- Send Transcript to Supabase Edge Function ---
+    async function processWithAI() {
+        const transcript = document.getElementById('live-transcript').value.trim();
+        if (!transcript || !supabaseClient) return;
+
+        document.getElementById('ai-status').innerText = "⏳ AI is analyzing response...";
+        
+        try {
+            const { data, error } = await supabaseClient.functions.invoke('puwer-ai', {
+                body: { 
+                    transcript: transcript, 
+                    currentQuestion: questions[currentQuestionIndex].text,
+                    isToolIdStep: currentQuestionIndex === 0
+                }
+            });
+            
+            if (error) throw error;
+            
+            // Auto-select status if the AI determined one
+            if(data.status && data.status !== 'none') {
+                selectStatus(data.status);
+            }
+            
+            document.getElementById('ai-status').innerText = "✅ AI Analysis Complete";
+            // Speak the AI's reply
+            if(data.ai_response) {
+                speakPrompt(data.ai_response);
+            }
+            
+        } catch (e) {
+            console.error(e);
+            document.getElementById('ai-status').innerText = "⚠️ AI connection failed. Please select manually.";
         }
     }
 
     function selectStatus(status) {
         resetButtons();
-        document.getElementById('btn-' + status).classList.add('active');
+        const btn = document.getElementById('btn-' + status);
+        if(btn) btn.classList.add('active');
         currentToolData.status = status;
     }
 
     function resetButtons() {
         ['pass', 'fail', 'na'].forEach(s => {
             const btn = document.getElementById('btn-' + s);
-            btn.classList.remove('active');
+            if(btn) btn.classList.remove('active');
         });
     }
 
@@ -504,7 +508,7 @@
     }
 
     function nextQuestion() {
-        window.speechSynthesis.cancel(); // Stop audio if moving to next step
+        window.speechSynthesis.cancel(); 
         
         inspectionData.push({
             step: questions[currentQuestionIndex].mod,
@@ -537,14 +541,11 @@
     function initSignaturePad() {
         canvas = document.getElementById('signature-pad');
         ctx = canvas.getContext('2d');
-        
         canvas.width = canvas.offsetWidth; 
         canvas.height = canvas.offsetHeight;
-        
         canvas.addEventListener('touchstart', handleStart, {passive: false});
         canvas.addEventListener('touchmove', handleMove, {passive: false});
         canvas.addEventListener('touchend', handleEnd, {passive: false});
-        
         canvas.addEventListener('mousedown', handleStart);
         canvas.addEventListener('mousemove', handleMove);
         canvas.addEventListener('mouseup', handleEnd);
@@ -555,36 +556,13 @@
         const rect = canvas.getBoundingClientRect();
         let clientX = e.touches ? e.touches[0].clientX : e.clientX;
         let clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        return {
-            x: clientX - rect.left,
-            y: clientY - rect.top
-        };
+        return { x: clientX - rect.left, y: clientY - rect.top };
     }
 
-    function handleStart(e) {
-        e.preventDefault();
-        isDrawing = true;
-        const pos = getPointerPos(e);
-        ctx.beginPath();
-        ctx.moveTo(pos.x, pos.y);
-    }
-
-    function handleMove(e) {
-        e.preventDefault();
-        if (!isDrawing) return;
-        const pos = getPointerPos(e);
-        ctx.lineTo(pos.x, pos.y);
-        ctx.stroke();
-    }
-
-    function handleEnd(e) {
-        e.preventDefault();
-        isDrawing = false;
-    }
-    
-    function clearSignature() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
+    function handleStart(e) { e.preventDefault(); isDrawing = true; const pos = getPointerPos(e); ctx.beginPath(); ctx.moveTo(pos.x, pos.y); }
+    function handleMove(e) { e.preventDefault(); if (!isDrawing) return; const pos = getPointerPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); }
+    function handleEnd(e) { e.preventDefault(); isDrawing = false; }
+    function clearSignature() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
     async function submitToSupabase() {
         if (!supabaseClient) {
