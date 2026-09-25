@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PUWER Inspection App</title>
+    <!-- Load Supabase Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -136,7 +137,7 @@
         }
         .response-label { font-size: 10px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 10px; display: block; }
         
-        /* Updated to a real textarea so the manager can type */
+        /* Textarea allows both dictation and manual typing */
         .response-text { 
             width: 100%; 
             min-height: 80px; 
@@ -189,7 +190,7 @@
 
 <div class="container">
     
-    <!-- Database Settings Panel (Fix for cross-device testing) -->
+    <!-- Database Settings Panel -->
     <div id="settings-section" class="section">
         <div class="briefing-card">
             <h3 style="color: var(--app-dark); margin-top: 0;">Database Sync Settings</h3>
@@ -207,6 +208,7 @@
         </div>
     </div>
 
+    <!-- Briefing Section -->
     <div id="briefing-section" class="section active">
         <div class="briefing-card">
             <h3 style="color: var(--app-dark); margin-top: 0;">PUWER Audit Briefing</h3>
@@ -217,6 +219,7 @@
         </div>
     </div>
 
+    <!-- Main Inspection Section -->
     <div id="inspection-section" class="section">
         <div class="inspector-details">
             <input type="text" class="input-box" placeholder="Inspector Name" id="inspector-name">
@@ -236,7 +239,7 @@
 
             <div class="response-box">
                 <span class="response-label">Inspector Response (Speak or Type)</span>
-                <!-- Replaced div with textarea to allow typing -->
+                <!-- Textarea allows typing or dictation updates -->
                 <textarea id="live-transcript" class="response-text" placeholder="Tap the mic to dictate, or type your answer here..."></textarea>
                 
                 <div class="action-row">
@@ -263,6 +266,7 @@
         <button class="start-btn" onclick="finishInspection()" style="margin-top: 0;">☑ Submit Inspection Report</button>
     </div>
 
+    <!-- Signature Section -->
     <div id="signature-section" class="section">
         <div class="briefing-card">
             <h3 style="color: var(--app-dark); margin-top: 0;">Sign Off Inspection</h3>
@@ -277,6 +281,7 @@
         </div>
     </div>
 
+    <!-- Success Section -->
     <div id="success-section" class="section">
         <div class="briefing-card" style="text-align: center;">
             <h3 style="color: var(--btn-pass); margin-top: 0;">Inspection Submitted!</h3>
@@ -290,11 +295,12 @@
     let supabaseClient = null;
     let currentProject = '';
     
-    // --- Real Web Speech API Setup ---
+    // --- Speech Recognition (Listening) ---
     let isListening = false;
     let recognition = null;
-    if ('webkitSpeechRecognition' in window) {
-        recognition = new webkitSpeechRecognition();
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRec();
         recognition.continuous = true;
         recognition.interimResults = true;
         
@@ -303,7 +309,6 @@
             for (let i = event.resultIndex; i < event.results.length; ++i) {
                 finalTranscript += event.results[i][0].transcript;
             }
-            // Update the text box in real-time
             document.getElementById('live-transcript').value = finalTranscript;
         };
         
@@ -313,6 +318,35 @@
             document.getElementById('main-mic-btn').classList.remove('pulsing');
             document.getElementById('mic-label').innerText = "Speak";
         };
+    }
+
+    // --- Speech Synthesis (Speaking in Female Voice) ---
+    function speakPrompt(textToSpeak) {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel(); // Stop any previous playback
+            
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            const voices = window.speechSynthesis.getVoices();
+            
+            // Prioritize UK female voices (iOS / Chrome / Android)
+            const femaleVoice = voices.find(v => 
+                (v.lang === 'en-GB' || v.lang.startsWith('en')) && 
+                (v.name.toLowerCase().includes('female') || 
+                 v.name.toLowerCase().includes('hazel') || 
+                 v.name.toLowerCase().includes('samantha') || 
+                 v.name.toLowerCase().includes('victoria') ||
+                 v.name.toLowerCase().includes('zira'))
+            ) || voices.find(v => v.lang.startsWith('en'));
+
+            if (femaleVoice) {
+                utterance.voice = femaleVoice;
+            }
+            
+            utterance.rate = 0.95; // Clear, deliberate cadence
+            utterance.pitch = 1.0;
+            
+            window.speechSynthesis.speak(utterance);
+        }
     }
 
     let currentQuestionIndex = 0;
@@ -329,27 +363,27 @@
         { 
             mod: "MODULE 2 - ELECTRICAL & POWER SAFETY", 
             text: "Question 2: Are cables, plugs, and battery housings intact with no exposed wires?",
-            explanation: "Check the entire length of the power cord, the plug casing, and battery slots. Any cuts, taped repairs, or exposed copper means an automatic fail."
+            explanation: "Check the entire length of the power cord, plug casing, and battery slots. Any cuts, taped repairs, or exposed copper means an automatic fail."
         },
         { 
             mod: "MODULE 3 - PHYSICAL INTEGRITY", 
             text: "Question 3: Is the tool casing free from significant cracks, breaks, or structural damage?",
-            explanation: "Look for drop damage, shattered plastic, or bent metal that could compromise the tool's structural safety or expose internal moving parts."
+            explanation: "Look for drop damage, shattered plastic, or bent metal that could compromise structural safety or expose internal moving parts."
         },
         { 
             mod: "MODULE 4 - GUARDS & MECHANICAL", 
             text: "Question 4: Are all manufacturer safety guards present, secure, and functioning?",
-            explanation: "Ensure blade guards, shields, and safety locks are attached, move freely as intended, and have not been bypassed or removed by the operator."
+            explanation: "Ensure blade guards, shields, and safety locks are attached, move freely as intended, and have not been bypassed or removed."
         },
         { 
             mod: "MODULE 5 - EMERGENCY CONTROLS", 
             text: "Question 5: Do all switches and emergency cut-offs operate cleanly without sticking?",
-            explanation: "Test the trigger and the 'off' switch. The tool must immediately stop when the switch is released. Sticky triggers are highly dangerous."
+            explanation: "Test the trigger and off switch. The tool must immediately stop when released. Sticky triggers are highly dangerous."
         },
         { 
             mod: "MODULE 6 - GENERAL SUITABILITY", 
             text: "Question 6: Is the tool fit for its intended purpose on this specific site?",
-            explanation: "Assess if this is the correct tool for the job being performed. Using an underpowered or incorrect tool for a heavy-duty task is a safety violation."
+            explanation: "Assess if this is the correct tool for the job being performed. Using an incorrect or underpowered tool for heavy work is a safety violation."
         }
     ];
 
@@ -367,12 +401,16 @@
             if(savedDb) {
                 const config = JSON.parse(savedDb);
                 supabaseClient = window.supabase.createClient(config.url, config.key);
-                // Also populate the settings fields
                 document.getElementById('mobile-supa-url').value = config.url;
                 document.getElementById('mobile-supa-key').value = config.key;
             }
         } catch (e) {
             console.error("Database connection error", e);
+        }
+
+        // Pre-load synthesis voices for mobile browsers
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
         }
 
         initSignaturePad();
@@ -403,15 +441,20 @@
 
     function loadQuestion(index) {
         currentQuestionIndex = index;
-        document.getElementById('module-title').innerText = questions[index].mod;
-        document.getElementById('question-text').innerText = questions[index].text;
-        document.getElementById('question-explanation').innerText = questions[index].explanation;
-        document.getElementById('live-transcript').value = ""; // Clear text box
+        const q = questions[index];
+
+        document.getElementById('module-title').innerText = q.mod;
+        document.getElementById('question-text').innerText = q.text;
+        document.getElementById('question-explanation').innerText = q.explanation;
+        document.getElementById('live-transcript').value = "";
         
         resetButtons();
         document.getElementById('file-upload').value = '';
         document.getElementById('file-name').innerText = "no file selected";
         currentToolData.status = null; 
+
+        // Automatically speak the question and its explanation
+        speakPrompt(q.text + " " + q.explanation);
     }
 
     function toggleMic() {
@@ -424,6 +467,7 @@
         }
 
         if (!isListening) {
+            window.speechSynthesis.cancel(); // Stop AI speaking when user starts dictating
             isListening = true;
             btn.classList.add('pulsing');
             label.innerText = "Listening";
@@ -460,7 +504,8 @@
     }
 
     function nextQuestion() {
-        // Save the typed/spoken answer and the pass/fail button
+        window.speechSynthesis.cancel(); // Stop audio if moving to next step
+        
         inspectionData.push({
             step: questions[currentQuestionIndex].mod,
             question: questions[currentQuestionIndex].text,
@@ -481,28 +526,25 @@
     }
 
     function finishInspection() {
+        window.speechSynthesis.cancel();
         showSection('signature-section');
-        // Delay to allow canvas to render before calculating its size
         setTimeout(initSignaturePad, 200); 
     }
 
-    // --- Fixed iOS Touch Signature Pad Logic ---
+    // --- Touch Signature Pad Logic ---
     let canvas, ctx, isDrawing = false;
     
     function initSignaturePad() {
         canvas = document.getElementById('signature-pad');
         ctx = canvas.getContext('2d');
         
-        // Match internal canvas resolution to CSS size
         canvas.width = canvas.offsetWidth; 
         canvas.height = canvas.offsetHeight;
         
-        // Touch events specific for mobile Safari
         canvas.addEventListener('touchstart', handleStart, {passive: false});
         canvas.addEventListener('touchmove', handleMove, {passive: false});
         canvas.addEventListener('touchend', handleEnd, {passive: false});
         
-        // Standard mouse events
         canvas.addEventListener('mousedown', handleStart);
         canvas.addEventListener('mousemove', handleMove);
         canvas.addEventListener('mouseup', handleEnd);
@@ -511,7 +553,6 @@
     
     function getPointerPos(e) {
         const rect = canvas.getBoundingClientRect();
-        // Check if it's a touch event or mouse event
         let clientX = e.touches ? e.touches[0].clientX : e.clientX;
         let clientY = e.touches ? e.touches[0].clientY : e.clientY;
         return {
@@ -521,7 +562,7 @@
     }
 
     function handleStart(e) {
-        e.preventDefault(); // Stop scrolling on mobile
+        e.preventDefault();
         isDrawing = true;
         const pos = getPointerPos(e);
         ctx.beginPath();
@@ -529,7 +570,7 @@
     }
 
     function handleMove(e) {
-        e.preventDefault(); // Stop scrolling on mobile
+        e.preventDefault();
         if (!isDrawing) return;
         const pos = getPointerPos(e);
         ctx.lineTo(pos.x, pos.y);
@@ -545,7 +586,6 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
-    // --- Final Submission ---
     async function submitToSupabase() {
         if (!supabaseClient) {
             alert("Database not connected! Please click the 'DB Sync' button in the top right to link your database.");
