@@ -3,131 +3,1091 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HSE Audit - Access Portal</title>
+    <title>PUWER Inspection System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            margin: 0; 
-            background-color: #f4f4f9; 
+        .dark-bg { background-color: #0f172a; }
+        .card-bg { background-color: #1e293b; }
+        .explanation-box {
+            background-color: #334155;
+            border-left: 4px solid #3b82f6;
+            padding: 0.75rem 1rem;
+            border-radius: 0 0.5rem 0.5rem 0;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            text-align: left;
+            margin-top: 0.5rem;
         }
-        .container { 
-            background: white; 
-            padding: 40px; 
-            border-radius: 8px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
-            width: 100%; 
-            max-width: 400px; 
-            text-align: center; 
+        .explanation-toggle { font-size: 0.75rem; color: #60a5fa; cursor: pointer; text-decoration: underline; }
+        .explanation-toggle:hover { color: #93c5fd; }
+        .listen-box {
+            background: #0b1220;
+            border: 1px dashed #3b82f6;
+            padding: 0.7rem;
+            border-radius: 0.6rem;
+            text-align: center;
+            color: #93c5fd;
+            font-size: 0.85rem;
         }
-        h1 { color: #333; font-size: 24px; margin-bottom: 30px; }
-        .btn { 
-            display: block; 
-            width: 100%; 
-            padding: 15px; 
-            margin: 15px 0; 
-            border: none; 
-            border-radius: 5px; 
-            font-size: 16px; 
-            font-weight: bold;
-            cursor: pointer; 
-            transition: 0.3s; 
-        }
-        .btn-officer { background-color: #0056b3; color: white; }
-        .btn-manager { background-color: #28a745; color: white; }
-        .btn-back { background-color: #e0e0e0; color: #333; margin-top: 10px; }
-        .btn:hover { opacity: 0.9; }
-        
-        .input-section { display: none; margin-top: 20px; }
-        input[type="number"] { 
-            width: calc(100% - 24px); 
-            padding: 12px; 
-            margin-bottom: 15px; 
-            border: 1px solid #ccc; 
-            border-radius: 4px; 
-            font-size: 18px; 
-            text-align: center; 
-        }
-        .error { color: #dc3545; font-size: 14px; display: none; margin-bottom: 15px; }
+        .pulse-dot { animation: pulse 1.2s infinite; display: inline-block; }
+        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.4;transform:scale(1.15);} }
+        .btn-option { transition: all 0.2s ease; }
+        .btn-option:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1>HSE Audit Portal</h1>
+<body class="dark-bg text-slate-100 min-h-screen flex flex-col items-center justify-between p-4 font-sans">
 
-        <!-- Initial Selection Screen -->
-        <div id="selection-screen">
-            <button class="btn btn-officer" onclick="showSection('officer-section')">Officer Dashboard</button>
-            <button class="btn btn-manager" onclick="showSection('manager-section')">Site Manager Dashboard</button>
+    <header class="w-full max-w-xl text-center py-4 border-b border-slate-700">
+        <img id="app-logo" class="hidden h-10 mx-auto mb-1 rounded" alt="Company logo">
+        <h1 class="text-2xl font-bold tracking-wide text-blue-400">⚙️ PUWER Inspection System</h1>
+        <p id="progress-indicator" class="text-sm text-slate-400 mt-1">Tap screen to begin – briefing will be read aloud</p>
+    </header>
+
+    <main id="main-container" class="w-full max-w-xl flex-1 flex flex-col items-center justify-center p-4 text-center">
+        <div id="content-card" class="card-bg w-full rounded-2xl shadow-xl p-6 border border-slate-700">
+            <div id="display-area" class="space-y-4">
+                <div class="inline-block p-4 bg-slate-800 rounded-full text-blue-400 mb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <h2 class="text-xl font-semibold text-slate-200">Tap anywhere to start PUWER Inspection</h2>
+                <p class="text-sm text-slate-400">Briefing → site registration → spoken tool questions with automatic listening. Photos, stamps, tables and a signed PDF.</p>
+                <div class="flex justify-center space-x-2 mt-4 flex-wrap gap-y-2">
+                    <button id="voice-btn" class="btn-option text-xs bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg">🗣️ Voice: Auto</button>
+                    <button id="logo-add-btn" class="btn-option text-xs bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg">🏢 Add company logo</button>
+                    <button id="logo-remove-btn" class="hidden text-xs bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg">🗑️ Remove logo</button>
+                </div>
+                <input type="file" id="logo-input" accept="image/*" class="hidden">
+            </div>
         </div>
+    </main>
 
-        <!-- Officer PIN Section -->
-        <div id="officer-section" class="input-section">
-            <h3>Enter Officer PIN</h3>
-            <p id="officer-error" class="error">Incorrect PIN. Access denied.</p>
-            <input type="number" id="officer-pin" placeholder="Enter 4-digit PIN" autocomplete="off">
-            <button class="btn btn-officer" onclick="verifyOfficer()">Access Dashboard</button>
-            <button class="btn btn-back" onclick="resetView()">Back</button>
-        </div>
-
-        <!-- Site Manager Project Number Section -->
-        <div id="manager-section" class="input-section">
-            <h3>Enter Project Number</h3>
-            <p id="manager-error" class="error">Please enter a valid 4-digit project number.</p>
-            <input type="number" id="project-number" placeholder="e.g. 1761" autocomplete="off">
-            <button class="btn btn-manager" onclick="verifyManager()">Start Inspection</button>
-            <button class="btn btn-back" onclick="resetView()">Back</button>
+    <!-- Camera Modal -->
+    <div id="camera-modal" class="hidden fixed inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center p-4 z-50">
+        <div class="card-bg p-4 rounded-xl max-w-md w-full border border-slate-700 flex flex-col items-center">
+            <h3 class="text-lg font-medium mb-3">📷 Capture Photo Evidence</h3>
+            <video id="camera-stream" autoplay playsinline class="w-full rounded-lg bg-black h-64 object-cover mb-4"></video>
+            <canvas id="camera-canvas" class="hidden"></canvas>
+            <div class="flex space-x-4 w-full">
+                <button id="capture-btn" class="flex-1 bg-blue-600 hover:bg-blue-500 py-2 rounded-lg font-medium transition">📸 Capture</button>
+                <button id="cancel-camera-btn" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2 rounded-lg font-medium transition">Done</button>
+            </div>
         </div>
     </div>
 
+    <!-- Signature Modal -->
+    <div id="signature-modal" class="hidden fixed inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center p-4 z-50">
+        <div class="card-bg p-6 rounded-xl max-w-md w-full border border-slate-700 flex flex-col items-center">
+            <h3 class="text-lg font-medium mb-3">✍️ Inspector Signature</h3>
+            <div class="border border-slate-600 rounded-lg bg-white w-full h-48 mb-4">
+                <canvas id="signature-canvas" class="w-full h-full"></canvas>
+            </div>
+            <div class="flex space-x-4 w-full">
+                <button id="clear-sig-btn" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2 rounded-lg font-medium transition">Clear</button>
+                <button id="save-sig-btn" class="flex-1 bg-green-600 hover:bg-green-500 py-2 rounded-lg font-medium transition">✅ Confirm & Generate Report</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voice Picker Modal -->
+    <div id="voice-modal" class="hidden fixed inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center p-4 z-50">
+        <div class="card-bg p-4 rounded-xl max-w-md w-full border border-slate-700 flex flex-col items-center">
+            <h3 class="text-lg font-medium mb-2">🗣️ Choose Inspector Voice</h3>
+            <p class="text-xs text-slate-400 mb-3 text-center">Tap a voice to preview & select it.</p>
+            <div id="voice-list" class="w-full overflow-y-auto space-y-2 mb-3" style="max-height:50vh;"></div>
+            <button id="voice-done-btn" class="w-full bg-green-600 hover:bg-green-500 py-2 rounded-lg font-medium">✅ Done</button>
+        </div>
+    </div>
+
+    <footer class="w-full max-w-xl text-center py-3 text-xs text-slate-500 border-t border-slate-800">
+        PUWER Interactive Inspection Tool • Voice Driven • PDF Report
+    </footer>
+
     <script>
-        // Toggle visibility of the input sections
-        function showSection(sectionId) {
-            document.getElementById('selection-screen').style.display = 'none';
-            document.getElementById('officer-section').style.display = 'none';
-            document.getElementById('manager-section').style.display = 'none';
-            document.getElementById(sectionId).style.display = 'block';
+        // ============ CONFIG ============
+        const NO_PHOTO_NOTE = "No photo evidence recorded";
+        const SESSION_REF = "PUWER-" + new Date().toISOString().slice(0, 10).replace(/-/g, "") + "-" + Date.now().toString(36).toUpperCase().slice(-4);
+        const LOGO_SRC = "";
+        const MAX_PHOTOS = 3;
+
+        const BRIEFING = {
+            title: "📋 PUWER Audit Briefing",
+            text: "Welcome to the safety inspection module. Under the Provision and Use of Work Equipment Regulations (PUWER), it is your legal responsibility to ensure all tools operated on this site are safe.",
+            speak: "PUWER Audit Briefing. Welcome to the safety inspection module. Under the Provision and Use of Work Equipment Regulations (PUWER), it is your legal responsibility to ensure all tools operated on this site are safe."
+        };
+
+        const REGISTRATION = {
+            explanation: "These details establish the site and inspector identity, ensuring clear documentation and accountability. They are transcribed as the official title block on the left-hand side of the report header: the project name in CAPITAL LETTERS, and your name and role in Title Case.",
+            steps: [
+                { key: 'project', label: 'Project Name', question: 'What is the project name?', speak: 'Registration, step 1 of 4. What is the project name?', placeholder: 'e.g. The Arbitrarium', format: s => s.toUpperCase() },
+                { key: 'number', label: 'Project Number', question: 'What is the project number?', speak: 'Step 2 of 4. What is the project number?', placeholder: 'e.g. 1945', format: s => { const d = s.replace(/[^0-9]/g, ''); return d || s; } },
+                { key: 'name', label: 'Inspector Name', question: 'What is your name?', speak: 'Step 3 of 4. What is your name?', placeholder: 'e.g. John Does', format: s => titleCase(s) },
+                { key: 'role', label: 'Role / Position', question: 'What is your role or position?', speak: 'Step 4 of 4. What is your role or position?', placeholder: 'e.g. Site Manager', format: s => titleCase(s) }
+            ]
+        };
+
+        function titleCase(s) {
+            return s.replace(/\s+/g, ' ').trim().split(' ').map(w => {
+                if (!w) return w;
+                if (/^\d+$/.test(w)) return w;
+                if (/^[A-Z]{1,3}$/.test(w)) return w;
+                return w.split('-').map(p => p ? p.charAt(0).toUpperCase() + p.slice(1).toLowerCase() : p).join('-');
+            }).join(' ');
+        }
+        function cleanText(t) { return t.replace(/\s+/g, ' ').trim().replace(/\.+$/, ''); }
+
+        const questions = [
+            { id: 1, title: "Question 1 – Equipment Identification",
+              question: "What is the name of the tool, its maker, its reference registration number, and who is its owner?",
+              explanation: "This question helps you pinpoint exactly what equipment you are looking at. Look for the brand or manufacturer name on the tool, find the serial or asset number usually on a label plate, and check for any markings that indicate who owns it, like a company logo or inventory tag. If this information is not directly visible, it can be obtained from the contractor who uses the tool.",
+              type: "text",
+              speakText: "Question 1. What is the name of the tool, its maker, its reference registration number, and who is its owner?" },
+            { id: 2, title: "Question 2 – Power Source",
+              question: "What is the power source of the tool: battery powered, 110V powered, 240V powered, or not a power tool?",
+              explanation: "This question helps you determine how the tool is powered so you know the electrical or safety checks needed. Look for a battery pack, check the color of the plug and voltage markings on the tool's label; yellow plugs usually indicate 110V, while blue are typically 240V. If the tool has no cord and needs no electricity, classify it as not a power tool.",
+              type: "choice",
+              choices: ["Battery Powered", "110V Powered", "240V Powered", "Not a Power Tool"],
+              speakText: "Question 2. What is the power source of the tool? Battery powered, 110 volt powered, 240 volt powered, or not a power tool?" },
+            { id: 3, title: "Question 3 – Power Components & Safety",
+              question: "Are the battery, cable, plug, switch, and emergency stop system all intact, and is the emergency stop functioning properly?",
+              explanation: "Ensure the battery has no cracks or leaks. Check the entire length of the cable for cuts or exposed wires, and make sure the plug is secure with no loose pins or burn marks. Finally, test the switch to ensure it engages easily and stops the tool when released, and confirm the emergency stop, if present, shuts down the tool immediately when pressed.",
+              type: "choice",
+              choices: ["Yes – All Intact & Functioning", "No – Issues Found (describe)"],
+              speakText: "Question 3. Are the battery, cable, plug, switch, and emergency stop system all intact, and is the emergency stop functioning properly?" },
+            { id: 4, title: "Question 4 – Body & Structural Integrity",
+              question: "Is the tool's body free of cracks, bends, missing parts, or any components that appear altered or compromised?",
+              explanation: "Check the tool's main body carefully for any visible cracks or bends. Ensure all moving parts are attached tightly, and nothing looks like it has been improperly replaced or repaired with the wrong materials.",
+              type: "choice",
+              choices: ["Yes – Body is Intact", "No – Damage/Alterations Found (describe)"],
+              speakText: "Question 4. Is the tool's body free of cracks, bends, missing parts, or any components that appear altered or compromised?" },
+            { id: 5, title: "Question 5 – Calibration & Functionality",
+              question: "Does the tool require calibration, and if so, what is its status? Is the tool appropriate for safely undertaking the job, and has its functionality been tested?",
+              explanation: "Check if calibration is needed for tools like measuring devices and note its current status. Confirm that the tool is designed for the specific task and test it briefly to ensure it works as expected.",
+              type: "text",
+              speakText: "Question 5. Does the tool require calibration, and if so, what is its status? Is the tool appropriate for safely undertaking the job, and has its functionality been tested?" },
+            { id: 6, title: "Question 6 – Continue or Generate Report",
+              question: "Please state if you want to inspect a new item or generate the report.",
+              explanation: "This step allows the user to decide whether to continue the inspection process with another piece of equipment or to conclude the inspection and generate the final report.",
+              type: "decision",
+              choices: ["Inspect New Item", "Generate Report"],
+              speakText: "Question 6. Please state if you want to inspect a new item or generate the report." }
+        ];
+
+        // ============ STATE ============
+        let state = 'INIT';
+        let currentQuestionIndex = 0;
+        let currentItemIndex = 0;
+        let inspectionData = [];
+        let currentAnswers = {};
+        let regIndex = 0;
+        let regData = { project: '', number: '', name: '', role: '' };
+        let activeStream = null;
+        let signaturePad = null;
+        let pendingAnswer = false;
+        let tapToRetry = false;
+        let currentListenHandler = null;
+        let reaskUsed = {};
+        let logoDataUrl = null, logoRatio = 1;
+        let lastPdfBlob = null, lastFileName = '';
+
+        const mainContainer = document.getElementById('main-container');
+        const progressIndicator = document.getElementById('progress-indicator');
+        const displayArea = document.getElementById('display-area');
+
+        // ============ LOGO ============
+        function setLogo(dataUrl, persist) {
+            logoDataUrl = dataUrl;
+            const img = new Image();
+            img.onload = () => {
+                logoRatio = img.width / img.height;
+                const appLogo = document.getElementById('app-logo');
+                if (appLogo) { appLogo.src = dataUrl; appLogo.classList.remove('hidden'); }
+            };
+            img.src = dataUrl;
+            if (persist !== false) { try { localStorage.setItem('puwer_logo', dataUrl); } catch (e) {} }
+            document.getElementById('logo-remove-btn').classList.remove('hidden');
+        }
+        function initLogo() {
+            let src = null;
+            try { src = localStorage.getItem('puwer_logo'); } catch (e) {}
+            src = src || LOGO_SRC;
+            if (!src) return;
+            if (src.startsWith('data:')) { setLogo(src, false); return; }
+            fetch(src).then(r => r.blob()).then(b => {
+                const fr = new FileReader();
+                fr.onload = () => setLogo(fr.result, false);
+                fr.readAsDataURL(b);
+            }).catch(() => {});
+        }
+        document.getElementById('logo-add-btn').addEventListener('click', e => { e.stopPropagation(); document.getElementById('logo-input').click(); });
+        document.getElementById('logo-remove-btn').addEventListener('click', e => {
+            e.stopPropagation();
+            logoDataUrl = null;
+            try { localStorage.removeItem('puwer_logo'); } catch (err) {}
+            document.getElementById('app-logo').classList.add('hidden');
+            document.getElementById('logo-remove-btn').classList.add('hidden');
+        });
+        document.getElementById('logo-input').addEventListener('change', e => {
+            e.stopPropagation();
+            const f = e.target.files[0];
+            if (!f) return;
+            const fr = new FileReader();
+            fr.onload = () => setLogo(fr.result, true);
+            fr.readAsDataURL(f);
+        });
+        initLogo();
+
+        // ============ VOICE ENGINE ============
+        const HINT_F = /\b(female|libby|sonia|hazel|kate|emma|amy|alice|serena|susan|fiona|clara|zira|heera|hanna|natasha|samantha|victoria|karen|moira|tessa|aria|jenny|mia)\b/i;
+        const HINT_M = /\b(male|daniel|george|ryan|oliver|jack|arthur|fred|thomas|gordon|bruce|nathan|aaron|alex|lee|guy|david|michael)\b/i;
+        const HINT_Q = /\b(enhanced|premium|natural|neural|online|plus|hd|siri)\b/i;
+
+        let voicePool = [];
+        let selectedVoice = null;
+        let chosenVoiceURI = null;
+        try { chosenVoiceURI = localStorage.getItem('puwer_voice_uri'); } catch (e) {}
+
+        function voiceMeta(v) {
+            const n = v.name || '';
+            const female = HINT_F.test(n);
+            const male = HINT_M.test(n);
+            const quality = HINT_Q.test(n) || /google/i.test(n);
+            let s = 1;
+            if (female) s += 6;
+            if (quality) s += 3;
+            if (male) s -= 8;
+            const lang = (v.lang || '').toLowerCase().replace('_', '-');
+            return { s, female, male, quality, lang };
+        }
+        function autoPick() {
+            if (!voicePool.length) return null;
+            const metas = voicePool.map(v => ({ v, m: voiceMeta(v) }));
+            const pick = a => a.length ? a.slice().sort((x, y2) => y2.m.s - x.m.s)[0].v : null;
+            const gb = metas.filter(x => x.m.lang.startsWith('en-gb'));
+            return pick(gb.filter(x => x.m.female)) ||
+                   pick(metas.filter(x => /en-(ie|au|nz|za)/.test(x.m.lang) && x.m.female)) ||
+                   pick(gb) ||
+                   pick(metas.filter(x => x.m.lang.startsWith('en') && x.m.female)) ||
+                   metas[0].v;
+        }
+        function updateVoiceBtnLabel() {
+            const btn = document.getElementById('voice-btn');
+            if (!btn) return;
+            btn.innerText = selectedVoice ? 🗣️ Voice: ${selectedVoice.name.split('(')[0].trim()} : '🗣️ Voice: Auto';
+        }
+        function resolveVoices() {
+            if (!('speechSynthesis' in window)) return;
+            voicePool = window.speechSynthesis.getVoices() || [];
+            if (!voicePool.length) return;
+            selectedVoice = null;
+            if (chosenVoiceURI) selectedVoice = voicePool.find(v => v.voiceURI === chosenVoiceURI) || null;
+            if (!selectedVoice) selectedVoice = autoPick();
+            updateVoiceBtnLabel();
+        }
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = resolveVoices;
+            resolveVoices();
+            let tries = 0;
+            const poll = setInterval(() => {
+                tries++;
+                resolveVoices();
+                if (voicePool.length || tries > 30) clearInterval(poll);
+            }, 300);
         }
 
-        // Return to the main button selection
-        function resetView() {
-            document.getElementById('selection-screen').style.display = 'block';
-            document.getElementById('officer-section').style.display = 'none';
-            document.getElementById('manager-section').style.display = 'none';
-            document.getElementById('officer-pin').value = '';
-            document.getElementById('project-number').value = '';
-            document.getElementById('officer-error').style.display = 'none';
-            document.getElementById('manager-error').style.display = 'none';
+        function renderVoiceList() {
+            const list = document.getElementById('voice-list');
+            list.innerHTML = '';
+            const mk = (label, sub, onClick, active) => {
+                const b = document.createElement('button');
+                b.className = 'w-full text-left bg-slate-700 hover:bg-blue-600 px-3 py-2 rounded-lg text-sm transition ' + (active ? 'ring-2 ring-green-400' : '');
+                b.innerHTML = ${label}<span class="block text-[10px] text-slate-400">${sub}</span>;
+                b.addEventListener('click', e => { e.stopPropagation(); onClick(); });
+                list.appendChild(b);
+            };
+            mk('🤖 Auto – best British', 'Let the app choose the clearest en-GB voice', () => {
+                chosenVoiceURI = null;
+                try { localStorage.removeItem('puwer_voice_uri'); } catch (e) {}
+                selectedVoice = autoPick();
+                updateVoiceBtnLabel();
+                renderVoiceList();
+                speak("Automatic voice selection restored.");
+            }, !chosenVoiceURI);
+            const sorted = voicePool.slice().sort((a, b) => voiceMeta(b).s - voiceMeta(a).s);
+            if (!sorted.length) {
+                const p = document.createElement('p');
+                p.className = 'text-xs text-slate-400 text-center py-2';
+                p.innerText = 'No voices detected yet. Close this box, tap the screen once to start, then reopen the picker – or check iPhone Settings → Accessibility → Spoken Content → Voices.';
+                list.appendChild(p);
+                return;
+            }
+            sorted.forEach(v => {
+                const m = voiceMeta(v);
+                const tag = m.female ? '👩' : (m.male ? '👨' : '🗣️');
+                const q = m.quality ? ' ✨natural' : '';
+                mk(${tag} ${v.name}${q}, ${v.lang}${selectedVoice && v.voiceURI === selectedVoice.voiceURI ? ' • ✔️ current' : ' • tap to preview & select'}, () => {
+                    chosenVoiceURI = v.voiceURI;
+                    try { localStorage.setItem('puwer_voice_uri', v.voiceURI); } catch (e) {}
+                    selectedVoice = v;
+                    updateVoiceBtnLabel();
+                    renderVoiceList();
+                    speak(Hello! I am ${v.name}. I will read your PUWER inspection questions clearly and calmly.);
+                }, selectedVoice && v.voiceURI === selectedVoice.voiceURI);
+            });
         }
+        document.getElementById('voice-btn').addEventListener('click', e => {
+            e.stopPropagation();
+            resolveVoices();
+            renderVoiceList();
+            document.getElementById('voice-modal').classList.remove('hidden');
+        });
+        document.getElementById('voice-done-btn').addEventListener('click', e => {
+            e.stopPropagation();
+            cancelTTS();
+            document.getElementById('voice-modal').classList.add('hidden');
+        });
 
-        // Verify the 1945 PIN
-        function verifyOfficer() {
-            const pin = document.getElementById('officer-pin').value;
-            if (pin === '1945') {
-                // Redirect to the Officer Dashboard HTML file
-                window.location.href = 'officer_dashboard.html'; 
-            } else {
-                document.getElementById('officer-error').style.display = 'block';
+        function speak(text, callback) {
+            if (!('speechSynthesis' in window)) { if (callback) callback(); return; }
+            if (!selectedVoice) resolveVoices();
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            if (selectedVoice) { utterance.voice = selectedVoice; utterance.lang = selectedVoice.lang; }
+            else utterance.lang = 'en-GB';
+            utterance.rate = 0.9;
+            utterance.pitch = 1.05;
+            utterance.volume = 1.0;
+            let finished = false;
+            const done = () => { if (!finished) { finished = true; if (callback) callback(); } };
+            utterance.onend = done;
+            utterance.onerror = done;
+            const safety = Math.min(30000, Math.max(8000, text.split(' ').length * 500));
+            setTimeout(done, safety);
+            try { window.speechSynthesis.speak(utterance); } catch (e) { done(); }
+        }
+        function cancelTTS() { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); }
+
+        // ============ SPEECH RECOGNITION ============
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-GB';
+        }
+        function stopRec() { try { if (recognition) recognition.stop(); } catch (e) {} }
+
+        function listenForInput(callback) {
+            if (!recognition) {
+                const manual = prompt("Speech recognition not supported. Please type your response:");
+                callback(manual ? cleanText(manual) : "No response recorded");
+                return;
+            }
+            progressIndicator.innerText = "🎤 Listening... speak now";
+            let responded = false;
+            recognition.onresult = (event) => { if (responded) return; responded = true; callback(event.results[0][0].transcript); };
+            recognition.onerror = () => { if (responded) return; responded = true; callback("No response recorded"); };
+            recognition.onend = () => { if (!responded) { responded = true; callback("No response recorded"); } };
+            try { recognition.start(); }
+            catch (e) {
+                try { recognition.stop(); setTimeout(() => recognition.start(), 200); }
+                catch (err) { callback("No response recorded"); }
             }
         }
 
-        // Verify the 4-digit Project Number
-        function verifyManager() {
-            const projectNum = document.getElementById('project-number').value;
-            
-            // Check if input is exactly 4 digits
-            if (projectNum.length === 4) {
-                // Save the project number to local storage for the inspection form to use
-                localStorage.setItem('currentProjectNumber', projectNum);
-                
-                // Redirect to the Mobile Inspection / Site Manager HTML file
-                window.location.href = 'site_manager_dashboard.html'; 
-            } else {
-                document.getElementById('manager-error').style.display = 'block';
+        function beginListening(handler) {
+            currentListenHandler = handler;
+            showListen(true);
+            listenForInput(t => {
+                showListen(false);
+                if (pendingAnswer) return;
+                handler(t);
+            });
+        }
+        function beginListeningAuto(handler, key) {
+            beginListening(t => {
+                if (t === 'No response recorded' && (reaskUsed[key] || 0) < 1) {
+                    reaskUsed[key] = (reaskUsed[key] || 0) + 1;
+                    progressIndicator.innerText = "🔁 Pardon? Re-asking...";
+                    speak("Sorry, I didn't catch that. Please could you repeat your answer?", () => beginListeningAuto(handler, key));
+                    return;
+                }
+                handler(t);
+            });
+        }
+        function showListen(on) {
+            const box = document.getElementById('listen-box');
+            if (!box) return;
+            if (on) { box.classList.remove('hidden'); box.innerHTML = '<span class="pulse-dot">🎤</span> Listening… speak now'; }
+            else box.classList.add('hidden');
+        }
+        function retryHint() {
+            tapToRetry = true;
+            const box = document.getElementById('listen-box');
+            if (box) { box.classList.remove('hidden'); box.innerHTML = "⚠️ Didn't catch that – tap anywhere to retry, or use the options below."; }
+            progressIndicator.innerText = "⚠️ Tap to retry listening";
+        }
+
+        // ============ INTERPRETATION ============
+        function interpretChoice(q, t) {
+            const s = t.toLowerCase();
+            if (q.id === 2) {
+                if (s.includes('batter')) return 'Battery Powered';
+                if (s.includes('110') || s.includes('one hundred and ten') || s.includes('hundred and ten')) return '110V Powered';
+                if (s.includes('240') || s.includes('two forty') || s.includes('two hundred and forty')) return '240V Powered';
+                if (s.includes('not a power tool') || s.includes('no power') || s.includes('manual')) return 'Not a Power Tool';
+                return null;
             }
+            if (q.id === 3 || q.id === 4) {
+                const yesLabel = q.id === 3 ? 'Yes – All Intact & Functioning' : 'Yes – Body is Intact';
+                const noLabel  = q.id === 3 ? 'No – Issues Found (describe)' : 'No – Damage/Alterations Found (describe)';
+                if (/\byes\b|\byeah\b|\byep\b/.test(s)) return yesLabel;
+                if (/\bno\b|\bnope\b|\bnegative\b/.test(s)) return noLabel;
+                return null;
+            }
+            return null;
+        }
+        function interpretDecision(t) {
+            const s = t.toLowerCase();
+            if (s.includes('new') || s.includes('another') || s.includes('continue') || s.includes('next item')) return 'NEW';
+            if (s.includes('report') || s.includes('generate') || s.includes('finish') || s.includes('complete') || s.includes('done')) return 'GENERATE';
+            return null;
+        }
+        function interpretPhoto(t) {
+            const s = t.toLowerCase();
+            if (/\bno\b|\bskip\b|\bnone\b|\bnegative\b|\bdone\b|\bthat's all\b/.test(s)) return false;
+            if (/\byes\b|\byeah\b|\bsure\b|\btake\b|\bcapture\b|\badd\b|\banother\b|\bphoto\b/.test(s)) return true;
+            return null;
+        }
+
+        // ============ FLOW ============
+        mainContainer.addEventListener('click', () => {
+            if (state === 'INIT') { startInspection(); }
+            else if (tapToRetry && currentListenHandler && (state === 'REGISTER' || state === 'QUESTION' || state === 'PHOTO_PROMPT')) {
+                tapToRetry = false;
+                beginListening(currentListenHandler);
+            }
+        });
+
+        function startInspection() {
+            currentItemIndex = 0;
+            currentQuestionIndex = 0;
+            inspectionData = [];
+            currentAnswers = {};
+            regIndex = 0;
+            regData = { project: '', number: '', name: '', role: '' };
+            showBriefing();
+        }
+
+        function showBriefing() {
+            state = 'BRIEFING';
+            pendingAnswer = false; tapToRetry = false;
+            progressIndicator.innerText = "📋 PUWER Audit Briefing";
+            displayArea.innerHTML = `
+                <div class="text-left space-y-4">
+                    <h2 class="text-xl font-bold text-blue-400">${BRIEFING.title}</h2>
+                    <p class="text-base text-slate-200 leading-relaxed border-l-4 border-blue-500 pl-4">${BRIEFING.text}</p>
+                    <p class="text-xs text-slate-500 italic">The briefing is being read aloud. Site registration follows automatically.</p>
+                </div>`;
+            speak(BRIEFING.speak, () => setTimeout(() => askRegStep(0), 500));
+        }
+
+        function askRegStep(i) {
+            regIndex = i;
+            state = 'REGISTER';
+            pendingAnswer = false; tapToRetry = false;
+            reaskUsed['reg' + i] = 0;
+            const step = REGISTRATION.steps[i];
+            progressIndicator.innerText = 📍 Site Registration | Step ${i + 1} of 4;
+            displayArea.innerHTML = `
+                <div class="text-left space-y-3">
+                    <span class="text-[11px] uppercase tracking-widest text-blue-400 font-bold">Site Registration • Step ${i + 1} of 4 • Report Title Block</span>
+                    <h2 class="text-lg font-semibold text-slate-100">📍 ${step.label}</h2>
+                    <p class="text-sm text-slate-300">${step.question}</p>
+                    <div>
+                        <span id="exp-toggle" class="explanation-toggle">ℹ️ Show Explanation</span>
+                        <div id="explanation-content" class="explanation-box hidden">${REGISTRATION.explanation}</div>
+                    </div>
+                    <div id="listen-box" class="listen-box hidden"></div>
+                    <div id="captured-line" class="hidden text-green-400 text-sm font-medium"></div>
+                    <div>
+                        <span id="type-toggle" class="explanation-toggle">⌨️ Type instead</span>
+                        <div id="type-box" class="hidden space-y-2 mt-2">
+                            <textarea id="text-answer" rows="2" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none resize-none" placeholder="${step.placeholder}"></textarea>
+                            <button id="text-submit" class="w-full bg-blue-600 hover:bg-blue-500 py-2 rounded-lg font-medium transition text-sm">✅ Submit</button>
+                        </div>
+                    </div>
+                </div>`;
+            attachCommonListeners();
+            document.getElementById('text-submit').addEventListener('click', e => {
+                e.stopPropagation();
+                const v = document.getElementById('text-answer').value.trim();
+                if (v) submitReg(cleanText(v));
+            });
+            speak(step.speak, () => beginListeningAuto(handleRegAnswer, 'reg' + i));
+        }
+
+        function handleRegAnswer(t) {
+            if (t === 'No response recorded') { retryHint(); return; }
+            submitReg(cleanText(t));
+        }
+
+        function submitReg(raw) {
+            if (pendingAnswer) return;
+            pendingAnswer = true; tapToRetry = false;
+            stopRec(); cancelTTS(); showListen(false);
+            const step = REGISTRATION.steps[regIndex];
+            const val = step.format(raw);
+            regData[step.key] = val;
+            const cl = document.getElementById('captured-line');
+            if (cl) { cl.classList.remove('hidden'); cl.textContent = '✅ Recorded: ' + val; }
+            setTimeout(() => {
+                if (regIndex + 1 < REGISTRATION.steps.length) askRegStep(regIndex + 1);
+                else nextQuestion(0);
+            }, 700);
+        }
+
+        function nextQuestion(i) {
+            currentQuestionIndex = i;
+            state = 'QUESTION';
+            pendingAnswer = false; tapToRetry = false;
+            const q = questions[i];
+            reaskUsed['q' + q.id + '_i' + currentItemIndex] = 0;
+            renderQuestion(q);
+            speak(q.speakText, () => beginListeningAuto(handleQuestionAnswer, 'q' + q.id + '_i' + currentItemIndex));
+        }
+
+        function attachCommonListeners() {
+            const stop = el => el && el.addEventListener('click', e => e.stopPropagation());
+            document.getElementById('exp-toggle').addEventListener('click', e => {
+                e.stopPropagation();
+                document.getElementById('explanation-content').classList.toggle('hidden');
+            });
+            const tt = document.getElementById('type-toggle');
+            if (tt) tt.addEventListener('click', e => { e.stopPropagation(); document.getElementById('type-box').classList.toggle('hidden'); });
+            stop(document.getElementById('type-box'));
+            stop(document.getElementById('text-answer'));
+        }
+
+        function renderQuestion(q) {
+            progressIndicator.innerText = Item ${currentItemIndex + 1} | Question ${q.id} of 6;
+            let controls = '';
+            if (q.type === 'choice') {
+                controls = <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">${q.choices.map(c => `<button class="choice-btn btn-option bg-slate-700 hover:bg-blue-600 text-white py-3 px-3 rounded-lg text-sm font-medium border border-slate-600" data-val="${c}">${c}</button>).join('')}</div>`;
+            } else if (q.type === 'decision') {
+                controls = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button class="dec-btn btn-option bg-blue-600 hover:bg-blue-500 text-white py-3 px-3 rounded-lg text-sm font-bold" data-dec="NEW">🔄 Inspect New Item</button>
+                    <button class="dec-btn btn-option bg-green-600 hover:bg-green-500 text-white py-3 px-3 rounded-lg text-sm font-bold" data-dec="GENERATE">📄 Generate Report</button>
+                </div>`;
+            } else {
+                controls = `<div>
+                    <span id="type-toggle" class="explanation-toggle">⌨️ Type instead</span>
+                    <div id="type-box" class="hidden space-y-2 mt-2">
+                        <textarea id="text-answer" rows="3" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none resize-none" placeholder="Type your answer here…"></textarea>
+                        <button id="text-submit" class="w-full bg-blue-600 hover:bg-blue-500 py-2 rounded-lg font-medium transition text-sm">✅ Submit Answer</button>
+                    </div>
+                </div>`;
+            }
+            displayArea.innerHTML = `
+                <div class="text-left space-y-3">
+                    <span class="text-[11px] uppercase tracking-widest text-blue-400 font-bold">Item ${currentItemIndex + 1} • Question ${q.id} of 6</span>
+                    <h2 class="text-lg font-semibold text-slate-100">${q.title}</h2>
+                    <p class="text-sm text-slate-300">${q.question}</p>
+                    <div>
+                        <span id="exp-toggle" class="explanation-toggle">ℹ️ Show Explanation</span>
+                        <div id="explanation-content" class="explanation-box hidden">${q.explanation}</div>
+                    </div>
+                    <div id="listen-box" class="listen-box hidden"></div>
+                    <div id="captured-line" class="hidden text-green-400 text-sm font-medium"></div>
+                    ${controls}
+                </div>`;
+            attachCommonListeners();
+            displayArea.querySelectorAll('.choice-btn').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); submitAnswer(b.dataset.val); }));
+            displayArea.querySelectorAll('.dec-btn').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); decide(b.dataset.dec); }));
+            const ts = document.getElementById('text-submit');
+            if (ts) ts.addEventListener('click', e => {
+                e.stopPropagation();
+                const v = document.getElementById('text-answer').value.trim();
+                if (v) submitAnswer(cleanText(v));
+            });
+        }
+
+        function handleQuestionAnswer(t) {
+            const q = questions[currentQuestionIndex];
+            if (q.type === 'text') {
+                if (t === 'No response recorded') { retryHint(); return; }
+                submitAnswer(cleanText(t));
+                return;
+            }
+            if (q.type === 'decision') {
+                const d = interpretDecision(t);
+                if (!d) { retryHint(); return; }
+                decide(d);
+                return;
+            }
+            const mapped = interpretChoice(q, t);
+            if (!mapped) { retryHint(); return; }
+            submitAnswer(mapped);
+        }
+
+        function submitAnswer(v) {
+            if (pendingAnswer) return;
+            pendingAnswer = true; tapToRetry = false;
+            stopRec(); cancelTTS(); showListen(false);
+            const q = questions[currentQuestionIndex];
+            currentAnswers['q' + q.id] = v;
+            const cl = document.getElementById('captured-line');
+            if (cl) { cl.classList.remove('hidden'); cl.textContent = '✅ Recorded: ' + v; }
+            setTimeout(promptForPhoto, 800);
+        }
+
+        function decide(v) {
+            if (pendingAnswer) return;
+            pendingAnswer = true; tapToRetry = false;
+            stopRec(); cancelTTS(); showListen(false);
+            if (v === 'NEW') {
+                saveCurrentItem();
+                currentItemIndex++;
+                currentAnswers = {};
+                setTimeout(() => nextQuestion(0), 400);
+            } else {
+                saveCurrentItem();
+                setTimeout(finishFlow, 400);
+            }
+        }
+
+        function saveCurrentItem() {
+            for (let qid = 1; qid <= 5; qid++) {
+                if (!currentAnswers['q' + qid]) currentAnswers['q' + qid] = 'Not answered';
+                if (!currentAnswers.photos) currentAnswers.photos = {};
+                if (!currentAnswers.photos['q' + qid]) currentAnswers.photos['q' + qid] = [];
+            }
+            inspectionData.push({ ...currentAnswers, itemNumber: currentItemIndex + 1 });
+        }
+
+        // ============ PHOTOS ============
+        function currentPhotoArray() {
+            const q = questions[currentQuestionIndex];
+            if (!currentAnswers.photos) currentAnswers.photos = {};
+            if (!currentAnswers.photos['q' + q.id]) currentAnswers.photos['q' + q.id] = [];
+            return currentAnswers.photos['q' + q.id];
+        }
+
+        function promptForPhoto(askAnother) {
+            state = 'PHOTO_PROMPT';
+            pendingAnswer = false;
+            const q = questions[currentQuestionIndex];
+            const count = currentPhotoArray().length;
+            progressIndicator.innerText = Item ${currentItemIndex + 1} | Photo evidence for Q${q.id} (${count}/${MAX_PHOTOS});
+            const msg = askAnother
+                ? Would you like to add another photo?.
+                : Would you like to add photo evidence for this question?;
+            displayArea.innerHTML = `
+                <div class="space-y-4 text-center">
+                    <h2 class="text-lg font-semibold text-slate-100">📷 Photo Evidence (${count}/${MAX_PHOTOS})</h2>
+                    <p class="text-sm text-slate-300">${msg}</p>
+                    <div id="listen-box" class="listen-box hidden"></div>
+                    <div class="flex space-x-4 justify-center">
+                        <button id="photo-yes" class="btn-option bg-blue-600 hover:bg-blue-500 py-2 px-6 rounded-lg font-medium transition text-sm">📸 ${askAnother ? 'Add Another' : 'Yes, Take Photo'}</button>
+                        <button id="photo-no" class="btn-option bg-slate-700 hover:bg-slate-600 py-2 px-6 rounded-lg font-medium transition text-sm">${askAnother ? '✅ Done' : 'Skip'}</button>
+                    </div>
+                </div>`;
+            document.getElementById('photo-yes').addEventListener('click', e => { e.stopPropagation(); submitPhoto(true); });
+            document.getElementById('photo-no').addEventListener('click', e => { e.stopPropagation(); submitPhoto(false); });
+            speak(msg, () => beginListening(handlePhotoAnswer));
+        }
+
+        function handlePhotoAnswer(t) {
+            const r = interpretPhoto(t);
+            if (r === null) { retryHint(); return; }
+            submitPhoto(r);
+        }
+
+        function submitPhoto(want) {
+            if (pendingAnswer) return;
+            pendingAnswer = true; tapToRetry = false;
+            stopRec(); cancelTTS(); showListen(false);
+            if (want && currentPhotoArray().length < MAX_PHOTOS) openCamera();
+            else advanceQuestion();
+        }
+
+        async function openCamera() {
+            state = 'CAMERA';
+            const modal = document.getElementById('camera-modal');
+            const video = document.getElementById('camera-stream');
+            modal.classList.remove('hidden');
+            try {
+                activeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                video.srcObject = activeStream;
+            } catch (err) { recordPhoto(null); }
+        }
+
+        document.getElementById('capture-btn').addEventListener('click', () => {
+            const video = document.getElementById('camera-stream');
+            const canvas = document.getElementById('camera-canvas');
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            recordPhoto(canvas.toDataURL('image/jpeg'));
+        });
+        document.getElementById('cancel-camera-btn').addEventListener('click', () => recordPhoto(null));
+
+        function recordPhoto(p) {
+            if (activeStream) { activeStream.getTracks().forEach(t => t.stop()); activeStream = null; }
+            document.getElementById('camera-modal').classList.add('hidden');
+            const arr = currentPhotoArray();
+            if (p) {
+                arr.push(p);
+                pendingAnswer = false;
+                if (arr.length < MAX_PHOTOS) promptForPhoto(true);
+                else advanceQuestion();
+            } else {
+                advanceQuestion();
+            }
+        }
+
+        function advanceQuestion() {
+            pendingAnswer = false;
+            const next = currentQuestionIndex + 1;
+            if (next < questions.length) nextQuestion(next);
+            else finishFlow();
+        }
+
+        // ============ FINISH & SIGNATURE ============
+        function finishFlow() {
+            state = 'FINISH';
+            progressIndicator.innerText = All checks finished – ${inspectionData.length} item(s) inspected;
+            displayArea.innerHTML = `
+                <div class="space-y-4 text-center">
+                    <div class="text-5xl">🎉</div>
+                    <p class="text-lg text-slate-200 font-semibold">Inspection Completed!</p>
+                    <p class="text-sm text-slate-400">You inspected <strong>${inspectionData.length}</strong> item(s). Sign below to generate the landscape PDF report.</p>
+                    <button id="sign-btn" class="btn-option bg-green-600 hover:bg-green-500 py-3 px-8 rounded-lg font-medium transition">✍️ Sign & Generate Report</button>
+                </div>`;
+            document.getElementById('sign-btn').addEventListener('click', e => { e.stopPropagation(); openSignatureModal(); });
+            speak("Inspection completed successfully. Please sign your report to generate the PDF.");
+        }
+
+        function openSignatureModal() {
+            document.getElementById('signature-modal').classList.remove('hidden');
+            const canvas = document.getElementById('signature-canvas');
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            if (!signaturePad) signaturePad = new SignaturePad(canvas);
+            else signaturePad.clear();
+        }
+        document.getElementById('clear-sig-btn').addEventListener('click', () => { if (signaturePad) signaturePad.clear(); });
+        document.getElementById('save-sig-btn').addEventListener('click', () => {
+            if (signaturePad && signaturePad.isEmpty()) { alert("Please provide a signature before generating the report."); return; }
+            const sig = signaturePad.toDataURL();
+            document.getElementById('signature-modal').classList.add('hidden');
+            generatePDFReport(sig);
+        });
+
+        // ============ PDF (LANDSCAPE A4 + RUNNING HEADER ON EVERY PAGE) ============
+        function buildFileName() {
+            const proj = (regData.project || 'PROJECT').replace(/[^A-Z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toUpperCase().slice(0, 40);
+            const num = (regData.number || '').replace(/[^A-Z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toUpperCase().slice(0, 10);
+            const d = new Date();
+            const ds = ${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')};
+            return PUWER_${proj}${num ? '_' + num : ''}_${ds}.pdf;
+        }
+
+        function itemStatus(item) {
+            const isFail = a => a && !/^yes/i.test(a);
+            return (isFail(item.q3) || isFail(item.q4)) ? 'REVIEW REQUIRED' : 'PASS';
+        }
+
+        function generatePDFReport(signatureData) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            const PW = doc.internal.pageSize.getWidth();
+            const PH = doc.internal.pageSize.getHeight();
+            const M = 15, UW = PW - 2 * M;
+            const COLW = [95, 112, 60];
+            const X2 = M + COLW[0], X3 = X2 + COLW[1];
+            const LIMIT = PH - 16;
+            const logoFmt = (logoDataUrl && logoDataUrl.startsWith('data:image/png')) ? 'PNG' : 'JPEG';
+            let y = 0;
+
+            // ---- PAGE 1 FULL HEADER BAND ----
+            doc.setFillColor(15, 23, 42); doc.rect(0, 0, PW, 42, 'F');
+            if (logoDataUrl) {
+                try {
+                    const lh = 12, lw = Math.min(lh * logoRatio, 45);
+                    doc.addImage(logoDataUrl, logoFmt, M, 4, lw, lh);
+                } catch (e) {}
+            }
+            doc.setTextColor(96, 165, 250); doc.setFontSize(18); doc.setFont("helvetica", "bold");
+            doc.text("PUWER INSPECTION REPORT", PW / 2, 11, { align: "center" });
+            doc.setDrawColor(59, 130, 246); doc.setLineWidth(0.6); doc.line(M, 17, PW - M, 17);
+
+            function lv(yy, label, value) {
+                doc.setFont("helvetica", "bold"); doc.setFontSize(7.5); doc.setTextColor(147, 197, 253);
+                doc.text(label, M, yy);
+                const lw = doc.getTextWidth(label);
+                doc.setFontSize(9.5); doc.setTextColor(255, 255, 255);
+                let v = value || "—";
+                const lines = doc.splitTextToSize(v, 150);
+                if (lines.length > 1) v = lines[0] + "…";
+                doc.text(v, M + lw + 2, yy);
+            }
+            lv(23, "PROJECT: ", regData.project);
+            lv(28, "PROJECT NUMBER: ", regData.number);
+            lv(33, "INSPECTOR: ", regData.name);
+            lv(38, "ROLE: ", regData.role);
+
+            doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(200, 200, 200);
+            doc.text(Document Ref: ${SESSION_REF}, PW - M, 23, { align: "right" });
+            doc.text(Generated: ${new Date().toLocaleString()}, PW - M, 28, { align: "right" });
+            doc.text(Total Items Inspected: ${inspectionData.length}, PW - M, 33, { align: "right" });
+            doc.setTextColor(0, 0, 0);
+            y = 50;
+
+            // ---- Table helpers ----
+            function headerRow() {
+                doc.setFillColor(226, 232, 240); doc.rect(M, y, UW, 9, 'F');
+                doc.setDrawColor(148, 163, 184);
+                doc.rect(M, y, COLW[0], 9); doc.rect(X2, y, COLW[1], 9); doc.rect(X3, y, COLW[2], 9);
+                doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(0, 0, 0);
+                doc.text("Question", M + 2, y + 6);
+                doc.text("Answer", X2 + 2, y + 6);
+                doc.text("Photo Evidence", X3 + 2, y + 6);
+                y += 9;
+            }
+            function spanRow(text, status) {
+                if (y + 10 > LIMIT) { doc.addPage(); y = 20; }
+                doc.setFillColor(30, 41, 59); doc.rect(M, y, UW, 10, 'F');
+                doc.setTextColor(147, 197, 253); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+                doc.text(text, M + 2, y + 6.8);
+                if (status) {
+                    doc.setFontSize(9);
+                    doc.setTextColor(status === 'PASS' ? 74 : 248, status === 'PASS' ? 222 : 113, status === 'PASS' ? 128 : 113);
+                    doc.text(status === 'PASS' ? '✔️ ' + status : '✘ ' + status, M + UW - 2, y + 6.8, { align: 'right' });
+                }
+                doc.setTextColor(0, 0, 0);
+                y += 10;
+            }
+            function dataRow(qText, aText, photos) {
+                photos = photos || [];
+                doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+                const lq = doc.splitTextToSize(qText || "—", COLW[0] - 4);
+                const la = doc.splitTextToSize(aText || "—", COLW[1] - 4);
+                let ph, noteLines = null;
+                if (photos.length) ph = 46;
+                else { noteLines = doc.splitTextToSize(NO_PHOTO_NOTE, COLW[2] - 4); ph = noteLines.length * 4 + 6; }
+                const h = Math.max(lq.length * 4.2 + 6, la.length * 4.2 + 6, ph, 12);
+                if (y + h > LIMIT) { doc.addPage(); y = 20; headerRow(); }
+                doc.setDrawColor(148, 163, 184);
+                doc.rect(M, y, COLW[0], h); doc.rect(X2, y, COLW[1], h); doc.rect(X3, y, COLW[2], h);
+                doc.setTextColor(0, 0, 0); doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+                doc.text(lq, M + 2, y + 5.5);
+                if (aText === 'Not answered') { doc.setTextColor(220, 38, 38); doc.setFont("helvetica", "italic"); }
+                doc.text(la, X2 + 2, y + 5.5);
+                doc.setTextColor(0, 0, 0); doc.setFont("helvetica", "normal");
+                if (photos.length) {
+                    try { doc.addImage(photos[0], 'JPEG', X3 + 2, y + (h - 42) / 2, 56, 42); }
+                    catch (e) {
+                        doc.setFontSize(8); doc.setFont("helvetica", "italic"); doc.setTextColor(100, 116, 139);
+                        doc.text(doc.splitTextToSize(NO_PHOTO_NOTE, COLW[2] - 4), X3 + 2, y + 5.5);
+                        doc.setTextColor(0, 0, 0);
+                    }
+                    if (photos.length > 1) {
+                        doc.setFontSize(7); doc.setFont("helvetica", "italic"); doc.setTextColor(100, 116, 139);
+                        doc.text(+${photos.length - 1} more in Photo Appendix, X3 + 2, y + h - 1.5);
+                        doc.setTextColor(0, 0, 0);
+                    }
+                } else {
+                    doc.setFontSize(8); doc.setFont("helvetica", "italic"); doc.setTextColor(100, 116, 139);
+                    doc.text(noteLines, X3 + 2, y + 5.5);
+                    doc.setTextColor(0, 0, 0); doc.setFontSize(9); doc.setFont("helvetica", "normal");
+                }
+                y += h;
+            }
+            function drawStamp(text, cx, cy, r, g, b) {
+                try {
+                    const ang = 10, rad = ang * Math.PI / 180;
+                    let gs = null;
+                    try { gs = new doc.GState({ opacity: 0.5 }); doc.setGState(gs); } catch (e) {}
+                    doc.setFont("helvetica", "bold"); doc.setFontSize(18);
+                    doc.setTextColor(r, g, b);
+                    const w = doc.getTextWidth(text);
+                    doc.text(text, cx, cy, { angle: ang, align: "center" });
+                    const hw = w / 2 + 3, off = 4.6;
+                    const dx = Math.cos(rad), dy = -Math.sin(rad);
+                    const px = Math.sin(rad), py = Math.cos(rad);
+                    doc.setLineWidth(0.9);
+                    doc.line(cx - dx * hw + px * off, cy - dy * hw + py * off, cx + dx * hw + px * off, cy + dy * hw + py * off);
+                    doc.line(cx - dx * hw - px * off, cy - dy * hw - py * off, cx + dx * hw - px * off, cy + dy * hw - py * off);
+                    if (gs) { try { doc.setGState(new doc.GState({ opacity: 1 })); } catch (e) {} }
+                    doc.setTextColor(0, 0, 0);
+                } catch (e) {}
+            }
+
+            // ---- Inspection Record Table ----
+            doc.setFontSize(14); doc.setFont("helvetica", "bold");
+            doc.text("Inspection Record Table", M, y); y += 6;
+            inspectionData.forEach(item => {
+                const status = itemStatus(item);
+                spanRow(ITEM ${item.itemNumber}, status);
+                headerRow();
+                const startY = y;
+                for (let qid = 1; qid <= 5; qid++) {
+                    dataRow(questions[qid - 1].question, item['q' + qid], (item.photos && item.photos['q' + qid]) || []);
+                }
+                drawStamp(status === 'PASS' ? 'PASS' : 'REVIEW REQUIRED', M + UW * 0.62, (startY + y) / 2,
+                          status === 'PASS' ? 22 : 220, status === 'PASS' ? 163 : 38, status === 'PASS' ? 74 : 38);
+                y += 6;
+            });
+
+            // ---- Summary page ----
+            doc.addPage(); y = 20;
+            doc.setFontSize(15); doc.setFont("helvetica", "bold");
+            doc.text("Inspection Summary", M, y); y += 10;
+            const isFail = a => a && !/^yes/i.test(a);
+            let passCount = 0, failCount = 0;
+            inspectionData.forEach(item => { if (isFail(item.q3) || isFail(item.q4)) failCount++; else passCount++; });
+            doc.setFontSize(10); doc.setFont("helvetica", "normal");
+            doc.text(Total Items Inspected: ${inspectionData.length}, M, y); y += 6;
+            doc.text(Passed: ${passCount}   |   Failed / Review Required: ${failCount}, M, y); y += 8;
+            const barW = 160, passW = inspectionData.length ? (passCount / inspectionData.length) * barW : 0;
+            doc.setFillColor(34, 197, 94); doc.rect(M, y, passW, 10, 'F');
+            doc.setFillColor(239, 68, 68); doc.rect(M + passW, y, barW - passW, 10, 'F');
+            y += 20;
+
+            // ---- Failed Items Table ----
+            doc.setFontSize(14); doc.setFont("helvetica", "bold");
+            doc.text("Failed / Review Required Items Table", M, y); y += 6;
+            let anyFail = false;
+            inspectionData.forEach(item => {
+                const failedChecks = [3, 4].filter(qid => isFail(item['q' + qid]));
+                if (!failedChecks.length) return;
+                anyFail = true;
+                spanRow(ITEM ${item.itemNumber} – REVIEW REQUIRED, 'REVIEW REQUIRED');
+                headerRow();
+                failedChecks.forEach(qid => {
+                    dataRow(questions[qid - 1].question, item['q' + qid], (item.photos && item.photos['q' + qid]) || []);
+                });
+                y += 4;
+            });
+            if (!anyFail) {
+                doc.setFontSize(10); doc.setFont("helvetica", "normal");
+                doc.text("No failed items – all equipment passed inspection.", M, y); y += 10;
+            }
+
+            // ---- Photo Appendix ----
+            const appendix = [];
+            inspectionData.forEach(item => {
+                for (let qid = 1; qid <= 5; qid++) {
+                    const arr = (item.photos && item.photos['q' + qid]) || [];
+                    if (arr.length > 1) appendix.push({ item: item.itemNumber, qid, title: questions[qid - 1].title, photos: arr.slice(1) });
+                }
+            });
+            if (appendix.length) {
+                doc.addPage(); y = 20;
+                doc.setFontSize(15); doc.setFont("helvetica", "bold");
+                doc.text("Photo Appendix – Additional Evidence", M, y); y += 8;
+                let col = 0;
+                appendix.forEach(entry => {
+                    entry.photos.forEach((ph, i) => {
+                        if (col === 0 && y + 70 > LIMIT) { doc.addPage(); y = 20; }
+                        const x = M + col * 89;
+                        doc.setFontSize(8); doc.setFont("helvetica", "bold"); doc.setTextColor(0, 0, 0);
+                        const cap = doc.splitTextToSize(Item ${entry.item} • ${entry.title} • Extra ${i + 1}, 85);
+                        doc.text(cap[0], x, y + 4);
+                        try { doc.addImage(ph, 'JPEG', x, y + 6, 85, 60); } catch (e) {}
+                        doc.setDrawColor(148, 163, 184); doc.rect(x, y + 6, 85, 60);
+                        col++;
+                        if (col === 3) { col = 0; y += 70; }
+                    });
+                });
+                if (col !== 0) y += 70;
+            }
+
+            // ---- Signature ----
+            if (signatureData) {
+                if (y + 40 > LIMIT) { doc.addPage(); y = 20; }
+                y += 6;
+                doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+                doc.text("Inspector Signature:", M, y); y += 4;
+                try { doc.addImage(signatureData, 'PNG', M, y, 70, 28); } catch (e) {}
+                y += 31;
+                doc.setFont("helvetica", "normal"); doc.setFontSize(8);
+                doc.text(Signed on: ${new Date().toLocaleString()}  •  ${regData.name || ''} (${regData.role || ''}), M, y);
+            }
+
+            // ---- RUNNING HEADER (pages 2+) + FOOTER (all pages) ----
+            function trunc(t, w) {
+                const L = doc.splitTextToSize(t || '—', w);
+                return L.length > 1 ? L[0] + '…' : (L[0] || '—');
+            }
+            function runningHeader(pageIdx) {
+                doc.setPage(pageIdx);
+                doc.setFillColor(15, 23, 42); doc.rect(0, 0, PW, 14, 'F');
+                let x0 = M;
+                if (logoDataUrl) {
+                    try {
+                        const lh = 8, lw = Math.min(lh * logoRatio, 24);
+                        doc.addImage(logoDataUrl, logoFmt, M, 3, lw, lh);
+                        x0 = M + lw + 2;
+                    } catch (e) {}
+                }
+                doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(255, 255, 255);
+                doc.text(trunc(PROJECT: ${regData.project || '—'}  •  No: ${regData.number || '—'}, 160), x0, 6.5);
+                doc.setFont("helvetica", "normal"); doc.setFontSize(7); doc.setTextColor(200, 200, 200);
+                doc.text(trunc(INSPECTOR: ${regData.name || '—'} (${regData.role || '—'}), 160), x0, 11.5);
+                doc.setFont("helvetica", "bold"); doc.setFontSize(7.5); doc.setTextColor(96, 165, 250);
+                doc.text("PUWER INSPECTION REPORT", PW - M, 6.5, { align: "right" });
+                doc.setFont("helvetica", "normal"); doc.setFontSize(7); doc.setTextColor(200, 200, 200);
+                doc.text(Ref: ${SESSION_REF}, PW - M, 11.5, { align: "right" });
+                doc.setDrawColor(59, 130, 246); doc.setLineWidth(0.4); doc.line(0, 14, PW, 14);
+                doc.setTextColor(0, 0, 0);
+            }
+            const totalPages = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= totalPages; i++) {
+                if (i > 1) runningHeader(i);
+                doc.setPage(i);
+                doc.setFontSize(7); doc.setFont("helvetica", "normal"); doc.setTextColor(150, 150, 150);
+                doc.text(PUWER Inspection Report – Ref ${SESSION_REF}, PW / 2, PH - 8, { align: "center" });
+                doc.text(Page ${i} of ${totalPages}, PW - 20, PH - 8, { align: "right" });
+            }
+
+            lastFileName = buildFileName();
+            doc.save(lastFileName);
+            try { lastPdfBlob = doc.output('blob'); } catch (e) { lastPdfBlob = null; }
+
+            state = 'DONE';
+            progressIndicator.innerText = "PDF downloaded successfully";
+            const canShare = !!(navigator.share && lastPdfBlob);
+            displayArea.innerHTML = `
+                <div class="space-y-4 text-center">
+                    <div class="text-5xl">📄</div>
+                    <p class="text-lg text-green-400 font-semibold">PDF Report Downloaded!</p>
+                    <p class="text-sm text-slate-400">Saved as <strong>${lastFileName}</strong></p>
+                    <div class="flex justify-center space-x-3">
+                        <button id="share-btn" class="${canShare ? '' : 'hidden'} btn-option bg-blue-600 hover:bg-blue-500 py-2 px-6 rounded-lg font-medium transition">📤 Share Report</button>
+                        <button id="restart-btn" class="btn-option bg-slate-700 hover:bg-slate-600 py-2 px-6 rounded-lg font-medium transition">🔄 Start New Inspection</button>
+                    </div>
+                </div>`;
+            const shareBtn = document.getElementById('share-btn');
+            if (canShare) shareBtn.addEventListener('click', e => {
+                e.stopPropagation();
+                try {
+                    const file = new File([lastPdfBlob], lastFileName, { type: 'application/pdf' });
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        navigator.share({ files: [file], title: 'PUWER Inspection Report' }).catch(() => {});
+                    } else {
+                        navigator.share({ title: 'PUWER Inspection Report', text: PUWER Inspection Report – ${lastFileName} }).catch(() => {});
+                    }
+                } catch (err) {}
+            });
+            document.getElementById('restart-btn').addEventListener('click', e => { e.stopPropagation(); location.reload(); });
+            speak("Your PUWER inspection report has been successfully generated and downloaded.");
         }
     </script>
 </body>
